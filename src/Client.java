@@ -88,21 +88,27 @@ public class Client extends Thread
 	}
 	
 	int index = -1;
-	File file = new File("Client//" + filename);
+	//File file = new File("Client//" + filename);
 	byte[] receiveMsg;
+	FileOutputStream fos = new FileOutputStream(new File("Client//" + filename));
 	
-    	While(index == -1) {
+	while(index == -1) {
 		receiveMsg = new byte[516];
-	
     		DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
     		try {
 			socket.receive(receivePacket);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
-    		FileOutputStream fos = new FileOutputStream(file);
-		fos.write(receiveMsg);
+	
+    		for(int i = 4; i < msg.length; i++) {
+			if(receiveMsg[i] == 0){
+				index = i;
+				i = data.length;
+			}
+		}
+		if(index == -1) fos.write(receiveMsg);
+		else fos.write(data, 0, index);
 	}
     }
     
