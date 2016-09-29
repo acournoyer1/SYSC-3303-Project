@@ -66,15 +66,23 @@ public class Client extends Thread
         
     }
     
-    private synchronized DatagramPacket buildData(byte[] data, int block#)
+    private synchronized DatagramPacket buildData(byte[] data, byte blockNumber, int portNumber)
     {
-        byte[] msg = new byte[516]
-	byte[1] = 3;
-	byte[3] = i;
-	for(j = 0, k = 4; j < data.length() && k < msg.length; j++, k++){
+        byte[] msg = new byte[516];
+        msg[1] = 3;
+        msg[3] = blockNumber;
+	for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)
+	{
 		msg[k] = data[j];
 	}
-	return msg;
+	DatagramPacket send = null;
+	try {
+		send = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), portNumber);
+	} catch (UnknownHostException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	return send;
     }
     
     private synchronized void sendReadReceive(String filename)
@@ -90,7 +98,12 @@ public class Client extends Thread
 	int index = -1;
 	//File file = new File("Client//" + filename);
 	byte[] receiveMsg;
-	FileOutputStream fos = new FileOutputStream(new File("Client//" + filename));
+	FileOutputStream fos = null;
+	try {
+		fos = new FileOutputStream(new File(filename));
+	} catch (FileNotFoundException e1) {
+		e1.printStackTrace();
+	}
 	
 	while(index == -1) {
 		receiveMsg = new byte[516];
@@ -101,14 +114,28 @@ public class Client extends Thread
 			e.printStackTrace();
 		}
 	
-    		for(int i = 4; i < msg.length; i++) {
+    		for(int i = 4; i < receiveMsg.length; i++) {
 			if(receiveMsg[i] == 0){
 				index = i;
-				i = data.length;
+				i = receiveMsg.length;
 			}
 		}
-		if(index == -1) fos.write(receiveMsg);
-		else fos.write(data, 0, index);
+		if(index == -1){
+			try {
+				fos.write(receiveMsg);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		else{
+			try {
+				fos.write(receiveMsg, 0, index);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
     }
     
@@ -123,11 +150,22 @@ public class Client extends Thread
 	}
 	
     	byte[] data = new byte[512];
-    	FileInputStream is = new FileInputStream(filename);
+    	FileInputStream is = null;
+		try {
+			is = new FileInputStream(filename);
+		} catch (FileNotFoundException e2) {
+			e2.printStackTrace();
+		}
 	byte[] receiveMsg = new byte[4];
-	int = 0;
+	byte i = 0;
 	
-	While(is.available()) {
+	int available = 0;
+	try {
+		available = is.available();
+	} catch (IOException e1) {
+		e1.printStackTrace();
+	}
+	while(available > 0) {
 		receiveMsg = new byte[4];
 	
     		DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
@@ -139,8 +177,12 @@ public class Client extends Thread
 
 		System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
 		
-		is.read(data);
-		DatagramPacket msg = buildData(data, i++);
+		try {
+			is.read(data);
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		DatagramPacket msg = buildData(data, i++, receivePacket.getPort());
 		try {
 			socket.send(msg);
 		} catch (IOException e) {
@@ -152,8 +194,8 @@ public class Client extends Thread
     @Override 
     public void run()
     {
-	sendReadReceive("test.txt");	
-	sendWriteReceive("test.txt");
+    	sendReadReceive("test.txt");	
+    	sendWriteReceive("test.txt");
    
     	socket.close();
     }
@@ -161,21 +203,5 @@ public class Client extends Thread
     public enum ActionType
     {
         READ, WRITE, INVALID
-    }
-    
-    public static void main(String args[])
-    {
-    	//Thread serverThread = new Server();
-    	//Thread hostThread = new IntermediateHost();
-    	//Thread clientThread = new Client();
-    	
-    	//serverThread.start();
-    	//hostThread.start();
-    	//try {
-	//	Thread.sleep(1000);
-	//} catch (InterruptedException e) {
-	//	e.printStackTrace();
-	//}
-        // clientThread.start();
     }
 }
