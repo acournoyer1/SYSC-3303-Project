@@ -1,15 +1,18 @@
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class Server extends Thread {
 	DatagramSocket receiveSocket;
 	DatagramSocket sendSocket;
+	ArrayList<Thread> threads;
 	
 	private static final int PORT_NUMBER = 69;
 	
 	public Server()
 	{
+		threads = new ArrayList<Thread>();
 		try {
 			receiveSocket = new DatagramSocket(PORT_NUMBER);
 		} catch (SocketException e) {
@@ -74,32 +77,35 @@ public class Server extends Thread {
 					}
 				}
 			}
-			byte[] response = {0, 0, 0, 0};
+			
+			int index = -1;
+			for(int i = 4; i < msg.length; i++)
+			{
+				if(msg[i] == 0)
+				{
+					index = i;
+					i = msg.length;
+				}
+			}
+			byte[] b = new byte[index - 4];
+			int j = 4;
+			for(int i = 0; i < b.length; i++, j++)
+			{
+				b[i] = msg[j];
+			}
+			
+			String filename = new String(b);
+			
 			if(msg[1] == 1)
 			{
 				System.out.println("The request is a valid read request.");
-				response[1] = 3;
-				response[3] = 1;
+				addThread(new ReadThread(receivedPacket.getPort(), filename));
 			}
 			else
 			{
 				System.out.println("The request is a valid write request.");
-				response[1] = 4;
+				addThread(new WriteThread(receivedPacket.getPort(), filename));
 			}
-			DatagramPacket sendPacket = null; 
-			try {
-				sendPacket = new DatagramPacket(response, response.length, InetAddress.getLocalHost(), receivedPacket.getPort());
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
-
-			System.out.println("Sending Response to Host: " + Arrays.toString(response) + "\n");
-			try {
-				sendSocket.send(sendPacket);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
 		}
 	}
 	
@@ -108,4 +114,84 @@ public class Server extends Thread {
 	{
 		this.sendReceive();
 	}
+	
+	private void addThread(Thread t)
+	{
+		threads.add(t);
+		t.start();
+	}
+	
+	private class ReadThread extends Thread
+	{
+		private DatagramSocket socket;
+		private int hostPort;
+		private String filename;
+		
+		public ReadThread(int hostPort, String filename)
+		{
+			this.hostPort = hostPort;
+			this.filename = filename;
+			try {
+				socket = new DatagramSocket();
+			} catch (SocketException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		private synchronized void sendReceive()
+		{
+			
+		}
+		
+		@Override
+		public void run()
+		{
+			sendReceive();
+		}
+	}
+	
+	private class WriteThread extends Thread
+	{
+		private DatagramSocket socket;
+		private int hostPort;
+		private String filename;
+		
+		public WriteThread(int hostPort, String filename)
+		{
+			this.hostPort = hostPort;
+			this.filename = filename;
+			try {
+				socket = new DatagramSocket();
+			} catch (SocketException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		private synchronized void sendReceive()
+		{
+			
+		}
+		
+		@Override
+		public void run()
+		{
+			sendReceive();
+		}
+	}
+	
+	public static void main(String args[])
+    {
+    	Thread server = new Server();
+    	Thread host = new IntermediateHost();
+    	Thread client = new Client();
+    	
+    	server.start();
+    	host.start();
+    	try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+    	client.start();
+    }
 }
