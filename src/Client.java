@@ -5,8 +5,8 @@ import java.util.Arrays;
 /**
  * Write a description of class Client here.
  * 
- * @author (your name) 
- * @version (a version number or a date)
+ * Team 11  
+ * V1.0
  */
 public class Client extends Thread
 {
@@ -87,21 +87,28 @@ public class Client extends Thread
 		e.printStackTrace();
 	}
 	
-    	DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
-    	try {
-		socket.receive(receivePacket);
-	} catch (IOException e) {
-		e.printStackTrace();
+	int index = -1;
+	File file = new File("Client//" + filename);
+	byte[] receiveMsg, data, msg;
+	
+    	While(index == -1) {
+		receiveMsg = new byte[516];
+	
+    		DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+    		try {
+			socket.receive(receivePacket);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+    		FileOutputStream fos = new FileOutputStream(file);
+		fos.write(receiveMsg);
 	}
-	FileOutputStream file = new FileOutputStream(
-	System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
-    	if (message.getData()[1] == 2)
     }
     
     private synchronized void sendWriteReceive(String filename)
     {
 	DatagramPacket message = buildRequest("ocTeT", filename, ActionType.WRITE);
-	
     	System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
     	try {
 		socket.send(message);
@@ -141,10 +148,7 @@ public class Client extends Thread
     {
 	sendReadReceive("test.txt");	
 	sendWriteReceive("test.txt");
-    	}
    
-    	msg = buildPacket("netASCII", "test.txt", ActionType.INVALID);
-    	//sendReceive(msg, "test.txt");
     	socket.close();
     }
     
