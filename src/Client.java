@@ -89,7 +89,7 @@ public class Client extends Thread
 	
 	int index = -1;
 	File file = new File("Client//" + filename);
-	byte[] receiveMsg, data, msg;
+	byte[] receiveMsg;
 	
     	While(index == -1) {
 		receiveMsg = new byte[516];
