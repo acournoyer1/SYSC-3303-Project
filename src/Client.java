@@ -31,36 +31,28 @@ public class Client extends Thread
         }
     }
     
-    private synchronized DatagramPacket buildPacket(String mode, String filename, ActionType action)
+    private synchronized DatagramPacket buildRequest(String mode, String filename, ActionType action)
     {
         byte[] request = new byte[100];
         request[0] = 0;
-        if(action == ActionType.READ)
-        {
+        if(action == ActionType.READ) {
             request[1] = 1;
         }
-        else if(action == ActionType.WRITE)
-        {
+        else if(action == ActionType.WRITE) {
             request[1] = 2;
         }
-        else
-        {
+        else {
             request[1] = 3;
         }
         int i = 2;
-        if(filename.getBytes() != null)
-        {
-	    FileIm
-            for(byte b: filename.getBytes())
-            {
+        if(filename.getBytes() != null) {
+            for(byte b: filename.getBytes()) {
                 request[i++] = b;
             }
         }
         request[i++] = 0;
-        if(mode.getBytes() != null) 
-        {
-            for(byte b: mode.getBytes())
-            {
+        if(mode.getBytes() != null) {
+            for(byte b: mode.getBytes()) {
                 request[i++] = b;
             }
         }
@@ -74,17 +66,26 @@ public class Client extends Thread
         
     }
     
-    private synchronized void sendReadReceive(DatagramPacket message)
+    private synchronized DatagramPacket buildData(byte[] data, int block#)
     {
+        byte[] msg = new byte[516]
+	byte[1] = 3;
+	byte[3] = i;
+	for(j = 0, k = 4; j < data.length() && k < msg.length; j++, k++){
+		msg[k] = data[j];
+	}
+	return msg;
+    }
+    
+    private synchronized void sendReadReceive(String filename)
+    {
+   	DatagramPacket message = buildRequest("ocTeT", filename, ActionType.WRITE);
     	System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
     	try {
 		socket.send(message);
 	} catch (IOException e) {
 		e.printStackTrace();
 	}
-		
-	if (message.getData()[1] == 2) byte[] receiveMsg = new byte[4];
-	else byte[] receiveMsg = new byte[516];
 	
     	DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
     	try {
@@ -97,41 +98,49 @@ public class Client extends Thread
     	if (message.getData()[1] == 2)
     }
     
-    private synchronized void sendWriteReceive(DatagramPacket message, String filename)
+    private synchronized void sendWriteReceive(String filename)
     {
-    	byte[] data = message.getData();
-    	FileInputStream is = new FileInputStream(filename);
+	DatagramPacket message = buildRequest("ocTeT", filename, ActionType.WRITE);
+	
     	System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
     	try {
 		socket.send(message);
 	} catch (IOException e) {
 		e.printStackTrace();
 	}
-		
-	byte[] receiveMsg = new byte[4];
 	
-    	DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
-    	try {
-		socket.receive(receivePacket);
-	} catch (IOException e) {
-		e.printStackTrace();
+    	byte[] data = new byte[512];
+    	FileInputStream is = new FileInputStream(filename);
+	byte[] receiveMsg = new byte[4];
+	int = 0;
+	
+	While(is.available()) {
+		receiveMsg = new byte[4];
+	
+    		DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+    		try {
+			socket.receive(receivePacket);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
+		
+		is.read(data);
+		DatagramPacket msg = buildData(data, i++);
+		try {
+			socket.send(msg);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
-	FileOutputStream file = new FileOutputStream(
-	System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
-    	if (message.getData()[1] == 2)
     }
     
     @Override 
     public void run()
     {
-    	DatagramPacket msg;
-    		msg = buildPacket("ocTeT", "test.txt", ActionType.READ);
-		sendReadReceive(msg, "test.txt");		
-    	}
-    	else
-    	{
-    		msg = buildPacket("ocTeT", "test.txt", ActionType.WRITE);
-		sendWriteReceive(msg, "test.txt");
+	sendReadReceive("test.txt");	
+	sendWriteReceive("test.txt");
     	}
    
     	msg = buildPacket("netASCII", "test.txt", ActionType.INVALID);
@@ -153,9 +162,9 @@ public class Client extends Thread
     	//serverThread.start();
     	//hostThread.start();
     	//try {
-//		Thread.sleep(1000);
-//	} catch (InterruptedException e) {
-//		e.printStackTrace();
+	//	Thread.sleep(1000);
+	//} catch (InterruptedException e) {
+	//	e.printStackTrace();
 	//}
         // clientThread.start();
     }
