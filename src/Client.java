@@ -48,8 +48,9 @@ public class Client extends Thread
             request[1] = 3;
         }
         int i = 2;
-        if(filename.getBytes() != null) 
+        if(filename.getBytes() != null)
         {
+	    FileIm
             for(byte b: filename.getBytes())
             {
                 request[i++] = b;
@@ -65,51 +66,76 @@ public class Client extends Thread
         }
         request[i++] = 0;
         try {
-			return new DatagramPacket(request, request.length, InetAddress.getLocalHost(), PORT_NUMBER);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			return null;
-		}
+		return new DatagramPacket(request, request.length, InetAddress.getLocalHost(), PORT_NUMBER);
+	} catch (UnknownHostException e) {
+		e.printStackTrace();
+		return null;
+	}
         
     }
     
-    private synchronized void sendReceive(DatagramPacket message)
+    private synchronized void sendReadReceive(DatagramPacket message)
     {
     	System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
     	try {
-			socket.send(message);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-    	byte[] receiveMsg = new byte[4];
+		socket.send(message);
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+		
+	if (message.getData()[1] == 2) byte[] receiveMsg = new byte[4];
+	else byte[] receiveMsg = new byte[516];
+	
     	DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
     	try {
-			socket.receive(receivePacket);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-    	System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
-    	
+		socket.receive(receivePacket);
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+	FileOutputStream file = new FileOutputStream(
+	System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
+    	if (message.getData()[1] == 2)
+    }
+    
+    private synchronized void sendWriteReceive(DatagramPacket message, String filename)
+    {
+    	byte[] data = message.getData();
+    	FileInputStream is = new FileInputStream(filename);
+    	System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
+    	try {
+		socket.send(message);
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+		
+	byte[] receiveMsg = new byte[4];
+	
+    	DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+    	try {
+		socket.receive(receivePacket);
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+	FileOutputStream file = new FileOutputStream(
+	System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
+    	if (message.getData()[1] == 2)
     }
     
     @Override 
     public void run()
     {
     	DatagramPacket msg;
-    	for(int i=0; i<10; i++)
-    	{
-    		if(i%2==0)
-    		{
-    			msg = buildPacket("ocTeT", "test.txt", ActionType.READ);
-    		}
-    		else
-    		{
-    			msg = buildPacket("ocTeT", "test.txt", ActionType.WRITE);
-    		}
-    		sendReceive(msg);
+    		msg = buildPacket("ocTeT", "test.txt", ActionType.READ);
+		sendReadReceive(msg, "test.txt");		
     	}
+    	else
+    	{
+    		msg = buildPacket("ocTeT", "test.txt", ActionType.WRITE);
+		sendWriteReceive(msg, "test.txt");
+    	}
+   
     	msg = buildPacket("netASCII", "test.txt", ActionType.INVALID);
-    	sendReceive(msg);
+    	//sendReceive(msg, "test.txt");
     	socket.close();
     }
     
@@ -120,17 +146,17 @@ public class Client extends Thread
     
     public static void main(String args[])
     {
-    	Thread serverThread = new Server();
-    	Thread hostThread = new IntermediateHost();
-    	Thread clientThread = new Client();
+    	//Thread serverThread = new Server();
+    	//Thread hostThread = new IntermediateHost();
+    	//Thread clientThread = new Client();
     	
-    	serverThread.start();
-    	hostThread.start();
-    	try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-    	clientThread.start();
+    	//serverThread.start();
+    	//hostThread.start();
+    	//try {
+//		Thread.sleep(1000);
+//	} catch (InterruptedException e) {
+//		e.printStackTrace();
+	//}
+        // clientThread.start();
     }
 }
