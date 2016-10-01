@@ -1,13 +1,13 @@
+import java.io.*;
+import java.net.*;
+import java.util.ArrayList;
+
 /**
  * Creates a instance of intermediate host the mediates requests between client and server
  * 
  * Team 11  
  * V1.16
  */
-import java.io.*;
-import java.net.*;
-import java.util.ArrayList;
-
 public class IntermediateHost extends Thread {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
@@ -16,7 +16,9 @@ public class IntermediateHost extends Thread {
 	private static final int PORT_NUMBER = 23;
 	private static final int SERVER_PORT_NUMBER = 69;
 	
-	//Creates new thread and receiveSocket
+	/*
+	*   Creates new thread and receiveSocket
+	*/
 	public IntermediateHost()
 	{
 		threads = new ArrayList<Thread>();
@@ -28,7 +30,9 @@ public class IntermediateHost extends Thread {
 		}
 	}
 	
-	//Waits for DatagramPacket from client then creates new client to deal with it
+	/*
+	*   Waits for DatagramPacket from client then creates new client to deal with it
+	*/
 	private synchronized void sendReceive()
 	{
 		while(true)
@@ -58,7 +62,9 @@ public class IntermediateHost extends Thread {
 		this.sendReceive();
 	}
 	
-	//Creates the host thread that deals with the DatagramPacket
+	/*
+	*   Creates the host thread that deals with the DatagramPacket
+	*/
 	private class HostThread extends Thread
 	{
 		int clientPort;
@@ -66,7 +72,9 @@ public class IntermediateHost extends Thread {
 		DatagramSocket socket;
 		byte[] request;
 		
-		//Creates new socket for thread
+		/*
+		*   Creates new socket for thread
+		*/
 		public HostThread(int port, byte[] msg)
 		{
 			this.clientPort = port;
@@ -78,7 +86,9 @@ public class IntermediateHost extends Thread {
 			}
 		}
 		
-		//Sends DatagramPacket to the server
+		/*
+		*    Sends DatagramPacket to the server and process the request
+		*/
 		private void sendReceive()
 		{
 			//Creates packet and sends it to the server
