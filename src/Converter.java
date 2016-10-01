@@ -6,7 +6,9 @@
  */
 public class Converter {
 
-	//Converts byte array into a string
+	/*
+	*   Converts byte array into a string
+	*/
 	public static String convertMessage(byte[] message)
 	{
 		//Initiates string with type of request
