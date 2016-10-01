@@ -79,7 +79,6 @@ public class Client extends Thread
 	try {
 		send = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), portNumber);
 	} catch (UnknownHostException e) {
-		// TODO Auto-generated catch block
 		e.printStackTrace();
 	}
 	return send;
@@ -128,14 +127,18 @@ public class Client extends Thread
 			}
 			//LAST ADDITION ALEX, feel free to change variable names to something else, I just didn't want to break anything
 			byte[] b = {0, 4, 0, 0};
-			DatagramPacket ack = new DatagramPacket(b, b.lenght, InetAddress.getLocalHost(), reveiveMsg.getPort());
-			socket.send(ack);
+			DatagramPacket ack;
+			try {
+				ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+				socket.send(ack);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		else{
 			try {
 				fos.write(receiveMsg, 0, index);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
