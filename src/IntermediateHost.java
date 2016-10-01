@@ -1,3 +1,9 @@
+/**
+ * Creates a instance of intermediate host the mediates requests between client and server
+ * 
+ * Team 11  
+ * V1.16
+ */
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
@@ -6,9 +12,11 @@ public class IntermediateHost extends Thread {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
 	
+	//Well known ports for intermediate and server
 	private static final int PORT_NUMBER = 23;
 	private static final int SERVER_PORT_NUMBER = 69;
 	
+	//Creates new thread and receiveSocket
 	public IntermediateHost()
 	{
 		threads = new ArrayList<Thread>();
@@ -20,10 +28,12 @@ public class IntermediateHost extends Thread {
 		}
 	}
 	
+	//Waits for DatagramPacket from client then creates new client to deal with it
 	private synchronized void sendReceive()
 	{
 		while(true)
 		{
+			//Receives DatagramPacket from client
 			System.out.println("Host waiting...");
 			byte[] msg = new byte[100];
 			DatagramPacket receivedPacketClient = new DatagramPacket(msg, msg.length);
@@ -35,6 +45,7 @@ public class IntermediateHost extends Thread {
 			}
 			System.out.println("Request received from Client: " + Converter.convertMessage(msg));
 			
+			//Creates new thread to deal with DatagramPacket
 			HostThread thread = new HostThread(receivedPacketClient.getPort(), msg);
 			threads.add(thread);
 			thread.start();
@@ -47,6 +58,7 @@ public class IntermediateHost extends Thread {
 		this.sendReceive();
 	}
 	
+	//Creates the host thread that deals with the DatagramPacket
 	private class HostThread extends Thread
 	{
 		int clientPort;
@@ -54,6 +66,7 @@ public class IntermediateHost extends Thread {
 		DatagramSocket socket;
 		byte[] request;
 		
+		//Creates new socket for thread
 		public HostThread(int port, byte[] msg)
 		{
 			this.clientPort = port;
@@ -65,8 +78,10 @@ public class IntermediateHost extends Thread {
 			}
 		}
 		
+		//Sends DatagramPacket to the server
 		private void sendReceive()
 		{
+			//Creates packet and sends it to the server
 			DatagramPacket sendPacketServer = null;
 			try {
 				sendPacketServer = new DatagramPacket(request, request.length, InetAddress.getLocalHost(), SERVER_PORT_NUMBER);
@@ -83,10 +98,12 @@ public class IntermediateHost extends Thread {
 				System.exit(1);
 			}
 			
-			if(request[1] == 1) //i.e. a READ
+			//If request is a read
+			if(request[1] == 1)
 			{
 				while(true)
 				{
+					//Creates a datagramPacket that will receive data from the server and sends it to the client
 					byte[] data = new byte[516];
 					DatagramPacket packet = new DatagramPacket(data, data.length);
 					try {
@@ -104,6 +121,7 @@ public class IntermediateHost extends Thread {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					//Creates acknowledgement packet and sends it to the server
 					byte[] ack = new byte[4];
 					packet = new DatagramPacket(ack, ack.length);
 					try {
@@ -123,10 +141,12 @@ public class IntermediateHost extends Thread {
 					}
 				}
 			}
-			else if(request[1] == 2) //i.e. a WRITE
+			//If request is a write
+			else if(request[1] == 2) 
 			{
 				while(true)
 				{
+					//Creates a acknowledgement packet and sends it to the client
 					byte[] ack = new byte[4];
 					DatagramPacket packet = new DatagramPacket(ack, ack.length);
 					try {
@@ -144,6 +164,7 @@ public class IntermediateHost extends Thread {
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
+					//Creates a datagramPacket that will receive data from the client and sends it to the server
 					byte[] data = new byte[516];
 					packet = new DatagramPacket(data, data.length);
 					try {
