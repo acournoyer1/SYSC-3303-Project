@@ -95,6 +95,8 @@ public class Client extends Thread
 	DatagramPacket send = null;
 	try {
 		send = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), portNumber); 
+	}
+	catch(IOException e){
 		e.printStackTrace();
 	}
 	return send;
