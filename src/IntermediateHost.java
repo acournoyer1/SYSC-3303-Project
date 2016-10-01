@@ -36,6 +36,7 @@ public class IntermediateHost extends Thread {
 			System.out.println("Request received from Client: " + Converter.convertMessage(msg));
 			
 			HostThread thread = new HostThread(receivedPacketClient.getPort(), msg);
+			threads.add(thread);
 			thread.start();
 		}
 	}
