@@ -100,7 +100,7 @@ public class Client extends Thread
 	byte[] receiveMsg;
 	FileOutputStream fos = null;
 	try {
-		fos = new FileOutputStream(new File(filename));
+		fos = new FileOutputStream(new File("c" + filename));
 	} catch (FileNotFoundException e1) {
 		e1.printStackTrace();
 	}
@@ -124,9 +124,12 @@ public class Client extends Thread
 			try {
 				fos.write(receiveMsg);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			//LAST ADDITION ALEX, feel free to change variable names to something else, I just didn't want to break anything
+			byte[] b = {0, 4, 0, 0};
+			DatagramPacket ack = new DatagramPacket(b, b.lenght, InetAddress.getLocalHost(), reveiveMsg.getPort());
+			socket.send(ack);
 		}
 		else{
 			try {
@@ -152,7 +155,7 @@ public class Client extends Thread
     	byte[] data = new byte[512];
     	FileInputStream is = null;
 		try {
-			is = new FileInputStream(filename);
+			is = new FileInputStream("c" + filename);
 		} catch (FileNotFoundException e2) {
 			e2.printStackTrace();
 		}
