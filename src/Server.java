@@ -11,9 +11,9 @@ import java.util.Arrays;
  * V1.16
  */
 public class Server extends Thread {
-	DatagramSocket receiveSocket;
-	DatagramSocket sendSocket;
-	ArrayList<Thread> threads;
+	private DatagramSocket receiveSocket;
+	private DatagramSocket sendSocket;
+	private ArrayList<Thread> threads;
 	
 	//Well-known server port number
 	private static final int PORT_NUMBER = 69;
