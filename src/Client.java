@@ -114,6 +114,7 @@ public class Client extends Thread
     	//Creates read request DatagramPacket and sends it to the intermediate host
     	DatagramPacket message = buildRequest("ocTeT", filename, ActionType.READ);		
     	System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
+    	System.out.println(filename);
     	try {
 		socket.send(message);	
 	} catch (IOException e) {
@@ -125,7 +126,7 @@ public class Client extends Thread
 	byte[] receiveMsg;
 	FileOutputStream fos=null;
 	try {
-		fos = new FileOutputStream(new File(directory.getAbsolutePath() + filename)); 
+		fos = new FileOutputStream(new File(directory.getAbsolutePath() + "\\" + filename)); 
 	} catch (FileNotFoundException e1) {
 		e1.printStackTrace();
 	}
@@ -200,7 +201,7 @@ public class Client extends Thread
     	byte[] data = new byte[512];
     	FileInputStream is = null;		
 	try {
-		is = new FileInputStream(directory.getAbsolutePath() + filename);
+		is = new FileInputStream(directory.getAbsolutePath() + "\\" + filename);
 	} catch (FileNotFoundException e2) {
 		e2.printStackTrace();
 	}
@@ -273,7 +274,7 @@ public class Client extends Thread
     		newRequest = false;
     		Scanner s = new Scanner(System.in);
     		System.out.println("Please write the name of the file you would like to read/write.");
-    		String filename = s.next();
+    		String filename = s.nextLine();
     		System.out.println("For a read request, enter r or read.");
     		System.out.println("For a write request, enter w or write.");
     		String request = s.next();

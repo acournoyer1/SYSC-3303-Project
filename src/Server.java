@@ -93,7 +93,7 @@ public class Server extends Thread {
 			
 			//Extracts the filename
 			int index = -1;
-			for(int i = 4; i < msg.length; i++)
+			for(int i = 2; i < msg.length; i++)
 			{
 				if(msg[i] == 0)
 				{
@@ -114,12 +114,14 @@ public class Server extends Thread {
 			if(msg[1] == 1)
 			{
 				System.out.println("The request is a valid read request.");
+				System.out.println(filename);
 				addThread(new ReadThread(receivedPacket.getPort(), filename));
 			}
 			//Creates new write thread with filename
 			else
 			{
 				System.out.println("The request is a valid write request.");
+				System.out.println(filename);
 				addThread(new WriteThread(receivedPacket.getPort(), filename));
 			}
 		}
@@ -131,7 +133,7 @@ public class Server extends Thread {
     private File getDirectory()
     {
 		JFileChooser directoryFinder = new JFileChooser();
-		directoryFinder.setDialogTitle("Client Directory");
+		directoryFinder.setDialogTitle("Server Directory");
 		directoryFinder.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		directoryFinder.setAcceptAllFileFilterUsed(false);
 		if (directoryFinder.showOpenDialog(directoryFinder) == JFileChooser.APPROVE_OPTION) { 
@@ -203,7 +205,9 @@ public class Server extends Thread {
 	    		byte[] data = new byte[512];
 	    		FileInputStream is = null;
 			try {
-				is = new FileInputStream(directory.getAbsolutePath() + filename);
+				System.out.println(filename);
+				System.out.println(directory.getAbsolutePath() + "\\" + filename);
+				is = new FileInputStream(directory.getAbsolutePath() + "\\" + filename);
 			} catch (FileNotFoundException e2) {
 				e2.printStackTrace();
 			}
@@ -344,6 +348,8 @@ public class Server extends Thread {
 			//Builds request packet and sends it to the intermediate host
 			DatagramPacket message = buildRequest("ocTeT", filename);
 	    		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
+	    		System.out.println(filename);
+				System.out.println(directory.getAbsolutePath() + "\\" + filename);
 	    		try {
 	    			socket.send(message);
 	    		} catch (IOException e) {
@@ -355,7 +361,7 @@ public class Server extends Thread {
 	    		byte[] receiveMsg;
 	    		FileOutputStream fos = null;
 	    		try {
-	    			fos = new FileOutputStream(new File(directory.getAbsolutePath() + filename));
+	    			fos = new FileOutputStream(new File(directory.getAbsolutePath() + "\\" + filename));
 	    		} catch (FileNotFoundException e1) {
 	    			e1.printStackTrace();
 	    		}
