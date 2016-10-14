@@ -3,6 +3,8 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import javax.swing.JFileChooser;
+
 
 /**
  * Creates a instance of server that receives requests from client/intermediate host and responds
@@ -13,6 +15,7 @@ import java.util.Arrays;
 public class Server extends Thread {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
+	private File directory;
 	
 	//Well-known server port number
 	private static final int PORT_NUMBER = 69;
@@ -22,6 +25,7 @@ public class Server extends Thread {
 	*/
 	public Server()
 	{
+		directory = null;
 		threads = new ArrayList<Thread>();
 		try {
 			receiveSocket = new DatagramSocket(PORT_NUMBER);
@@ -121,9 +125,31 @@ public class Server extends Thread {
 		}
 	}
 	
+	/*
+     * Enables the user to select which directory will act as the server's file system
+     */
+    private File getDirectory()
+    {
+		JFileChooser directoryFinder = new JFileChooser();
+		directoryFinder.setDialogTitle("Client Directory");
+		directoryFinder.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		directoryFinder.setAcceptAllFileFilterUsed(false);
+		if (directoryFinder.showOpenDialog(directoryFinder) == JFileChooser.APPROVE_OPTION) { 
+		      return directoryFinder.getSelectedFile();
+		}
+		else
+		{
+			return null;
+		}
+    }
+	
 	@Override
 	public void run()
 	{
+		while(directory == null)
+    	{
+    		directory = getDirectory();
+    	}
 		this.sendReceive();
 	}
 	
@@ -177,7 +203,7 @@ public class Server extends Thread {
 	    		byte[] data = new byte[512];
 	    		FileInputStream is = null;
 			try {
-				is = new FileInputStream("c" + filename);
+				is = new FileInputStream(directory.getAbsolutePath() + filename);
 			} catch (FileNotFoundException e2) {
 				e2.printStackTrace();
 			}
@@ -280,7 +306,6 @@ public class Server extends Thread {
 	        	return send;
 		}
 		
-		
 		@Override
 		public void run()
 		{
@@ -330,7 +355,7 @@ public class Server extends Thread {
 	    		byte[] receiveMsg;
 	    		FileOutputStream fos = null;
 	    		try {
-	    			fos = new FileOutputStream(new File("s" + filename));
+	    			fos = new FileOutputStream(new File(directory.getAbsolutePath() + filename));
 	    		} catch (FileNotFoundException e1) {
 	    			e1.printStackTrace();
 	    		}

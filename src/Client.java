@@ -1,6 +1,9 @@
 import java.io.*;
 import java.net.*;
 import java.util.Arrays;
+import java.util.Scanner;
+
+import javax.swing.JFileChooser;
 
 /*
  * Creates a instance of client which sends and receives files from/to server through the intermediate host
@@ -12,13 +15,14 @@ public class Client extends Thread
 {
     private static final int PORT_NUMBER = 23;
     private DatagramSocket socket;
-    
+    private File directory;
 
     /*
      * Constructor for objects of class Client
      */
     public Client()
     {
+    	directory = null;
         try
         {
             socket = new DatagramSocket();	//Creates socket that sends/receives DataPackets
@@ -121,7 +125,7 @@ public class Client extends Thread
 	byte[] receiveMsg;
 	FileOutputStream fos=null;
 	try {
-		fos = new FileOutputStream(new File("c" + filename)); 
+		fos = new FileOutputStream(new File(directory.getAbsolutePath() + filename)); 
 	} catch (FileNotFoundException e1) {
 		e1.printStackTrace();
 	}
@@ -196,7 +200,7 @@ public class Client extends Thread
     	byte[] data = new byte[512];
     	FileInputStream is = null;		
 	try {
-		is = new FileInputStream("c" + filename);
+		is = new FileInputStream(directory.getAbsolutePath() + filename);
 	} catch (FileNotFoundException e2) {
 		e2.printStackTrace();
 	}
@@ -237,12 +241,67 @@ public class Client extends Thread
 	}//END Loop
     }
     
+    
+    /*
+     * Enables the user to select which directory will act as the client's file system
+     */
+    private File getDirectory()
+    {
+		JFileChooser directoryFinder = new JFileChooser();
+		directoryFinder.setDialogTitle("Client Directory");
+		directoryFinder.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		directoryFinder.setAcceptAllFileFilterUsed(false);
+		if (directoryFinder.showOpenDialog(directoryFinder) == JFileChooser.APPROVE_OPTION) { 
+		      return directoryFinder.getSelectedFile();
+		}
+		else
+		{
+			return null;
+		}
+    }
+    
     @Override 
     public void run()
     {
-    	sendReadReceive("test.txt");	
-    	//sendWriteReceive("test.txt");
-   
+    	while(directory == null)
+    	{
+    		directory = getDirectory();
+    	}
+    	boolean newRequest = true;
+    	while(newRequest)
+    	{
+    		newRequest = false;
+    		Scanner s = new Scanner(System.in);
+    		System.out.println("Please write the name of the file you would like to read/write.");
+    		String filename = s.next();
+    		System.out.println("For a read request, enter r or read.");
+    		System.out.println("For a write request, enter w or write.");
+    		String request = s.next();
+    		if(request.equals("read") || request.equals("R") || request.equals("r"))
+    		{
+    			sendReadReceive(filename);
+    			System.out.println("Read request");
+    		}
+    		else if(request.equals("write") || request.equals("W") || request.equals("w"))
+    		{
+    			sendWriteReceive(filename);
+    			System.out.println("Write request");
+    		}
+    		else
+    		{
+    			System.out.println("Please enter a valid request.");
+    		}
+    		System.out.println("If you would like to make another request, enter c, if not, enter anything else");
+    		String continueRequests = s.next();
+    		if(continueRequests.equals("c") || continueRequests.equals("C"))
+    		{
+    			newRequest = true;
+    		}
+    		else
+    		{
+    			s.close();
+    		}
+    	}
     	socket.close();
     }
     
