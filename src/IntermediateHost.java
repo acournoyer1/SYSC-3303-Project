@@ -63,6 +63,15 @@ public class IntermediateHost extends Thread {
 	}
 	
 	/*
+	*    Creates a host instance and runs it
+	*/
+	public static void main(String args[])
+    {
+    	Thread host = new IntermediateHost();
+    	host.start();
+    }
+	
+	/*
 	*   Creates the host thread that deals with the DatagramPacket
 	*/
 	private class HostThread extends Thread

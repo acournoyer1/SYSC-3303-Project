@@ -12,7 +12,6 @@ import java.util.Arrays;
  */
 public class Server extends Thread {
 	private DatagramSocket receiveSocket;
-	private DatagramSocket sendSocket;
 	private ArrayList<Thread> threads;
 	
 	//Well-known server port number
@@ -28,12 +27,6 @@ public class Server extends Thread {
 			receiveSocket = new DatagramSocket(PORT_NUMBER);
 		} catch (SocketException e) {
 			e.printStackTrace();
-		}
-		try {
-			sendSocket = new DatagramSocket();
-		} catch (SocketException e) {
-			e.printStackTrace();
-			System.exit(1);
 		}
 	}
 	
@@ -436,21 +429,11 @@ public class Server extends Thread {
 	}
 	
 	/*
-	*    Creates server, intermediate host, and server threads, then starts them
+	*    Creates a server instance and runs it
 	*/
 	public static void main(String args[])
-    	{
-    		Thread server = new Server();
-    		Thread host = new IntermediateHost();
-    		Thread client = new Client();
-    	
-    		server.start();
-    		host.start();
-    		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-    		client.start();
-    	}
+    {
+    	Thread server = new Server();
+    	server.start();
+    }
 }

@@ -108,7 +108,7 @@ public class Client extends Thread
     private synchronized void sendReadReceive(String filename)
     {
     	//Creates read request DatagramPacket and sends it to the intermediate host
-   	DatagramPacket message = buildRequest("ocTeT", filename, ActionType.READ);		
+    	DatagramPacket message = buildRequest("ocTeT", filename, ActionType.READ);		
     	System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
     	try {
 		socket.send(message);	
@@ -241,9 +241,18 @@ public class Client extends Thread
     public void run()
     {
     	sendReadReceive("test.txt");	
-    	sendWriteReceive("test.txt");
+    	//sendWriteReceive("test.txt");
    
     	socket.close();
+    }
+    
+    /*
+	*    Creates a host instance and runs it
+	*/
+	public static void main(String args[])
+    {
+    	Thread client = new Client();
+    	client.start();
     }
     
     public enum ActionType
