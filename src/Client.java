@@ -309,14 +309,12 @@ public class Client extends Thread
 			}
 			DatagramPacket msg = buildData(data, i++, receivePacket.getPort());
 			try {
-				System.out.println("test");
 				socket.send(msg);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}//END Loop
 		try {
-			System.out.println("hello");
 			is.close();
 		} catch (IOException e) {
 			e.printStackTrace();
