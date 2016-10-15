@@ -101,7 +101,7 @@ public class Server extends Thread {
 					i = msg.length;
 				}
 			}
-			byte[] b = new byte[index - 4];
+			byte[] b = new byte[index - 2];
 			int j = 4;
 			for(int i = 0; i < b.length; i++, j++)
 			{

@@ -130,6 +130,7 @@ public class IntermediateHost extends Thread {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					serverPort = packet.getPort();
 					try {
 						packet = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), clientPort);
 					} catch (UnknownHostException e) {
@@ -173,6 +174,7 @@ public class IntermediateHost extends Thread {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					serverPort = packet.getPort();
 					try {
 						packet = new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(), clientPort);
 					} catch (UnknownHostException e) {
