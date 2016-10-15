@@ -18,6 +18,7 @@ public class Client extends Thread
 	private static final int PORT_NUMBER = 23;
 	private DatagramSocket socket;
 	private File directory;
+	private boolean verbose;
 
 	/*
 	 * Constructor for objects of class Client
@@ -349,24 +350,41 @@ public class Client extends Thread
 			return;
 		}
 		boolean newRequest = true;
+		boolean verboseCheck = false;
 		while(newRequest)
 		{
 			newRequest = false;
+			verboseCheck = false;
 			Scanner s = new Scanner(System.in);
 			System.out.println("For a read request, enter r or read.");
 			System.out.println("For a write request, enter w or write.");
 			String request = s.next();
 			System.out.println("Please write the name of the file you would like to read/write.");
 			String filename = s.next();
-			if(request.equals("read") || request.equals("R") || request.equals("r"))
+			System.out.println("For verbose mode, enter v or verbose.");
+			System.out.println("For quiet mode, enter q or quiet.");
+			String verbose = s.next();
+			if(verbose.equals("v") || verbose.equals("verbose"))
+			{
+				this.verbose = true;
+				verboseCheck = true;
+			}
+			else if (verbose.equals("q") || verbose.equals("quiet"))
+			{
+				this.verbose = false;
+				verboseCheck = true;
+			}
+			if(!verboseCheck)
+			{
+				System.out.println("Please enter a valid string for verbose/quiet mode.");
+			}
+			else if(request.equals("read") || request.equals("R") || request.equals("r"))
 			{
 				sendReadReceive(filename);
-				System.out.println("Read request");
 			}
 			else if(request.equals("write") || request.equals("W") || request.equals("w"))
 			{
 				sendWriteReceive(filename);
-				System.out.println("Write request");
 			}
 			else
 			{

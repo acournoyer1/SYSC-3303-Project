@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 /**
  * Creates a instance of intermediate host the mediates requests between client and server
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 public class IntermediateHost extends Thread {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
+	private boolean verbose;
 	
 	//Well known ports for intermediate and server
 	private static final int PORT_NUMBER = 23;
@@ -59,6 +61,29 @@ public class IntermediateHost extends Thread {
 	@Override
 	public void run()
 	{
+		Scanner s = new Scanner(System.in);
+		boolean verboseCheck = false;
+		while(!verboseCheck)
+		{
+			System.out.println("For verbose mode, enter v or verbose.");
+			System.out.println("For quiet mode, enter q or quiet.");
+			String verbose = s.nextLine();
+			if(verbose.equals("v") || verbose.equals("verbose"))
+			{
+				this.verbose = true;
+				verboseCheck = true;
+			}
+			else if (verbose.equals("q") || verbose.equals("quiet"))
+			{
+				this.verbose = false;
+				verboseCheck = true;
+			}
+			else
+			{
+				System.out.println("Please enter a valid string for verbose/quiet mode.");
+			}
+		}
+		s.close();
 		this.sendReceive();
 	}
 	

@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 
 import javax.swing.JFileChooser;
 
@@ -19,6 +20,7 @@ public class Server extends Thread {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
 	private File directory;
+	private boolean verbose;
 
 	//Well-known server port number
 	private static final int PORT_NUMBER = 69;
@@ -212,6 +214,29 @@ public class Server extends Thread {
 			System.out.println("Creation of server cancelled.");
 			return;
 		}
+		Scanner s = new Scanner(System.in);
+		boolean verboseCheck = false;
+		while(!verboseCheck)
+		{
+			System.out.println("For verbose mode, enter v or verbose.");
+			System.out.println("For quiet mode, enter q or quiet.");
+			String verbose = s.nextLine();
+			if(verbose.equals("v") || verbose.equals("verbose"))
+			{
+				this.verbose = true;
+				verboseCheck = true;
+			}
+			else if (verbose.equals("q") || verbose.equals("quiet"))
+			{
+				this.verbose = false;
+				verboseCheck = true;
+			}
+			else
+			{
+				System.out.println("Please enter a valid string for verbose/quiet mode.");
+			}
+		}
+		s.close();
 		this.sendReceive();
 	}
 
