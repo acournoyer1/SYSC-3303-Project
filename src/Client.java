@@ -237,6 +237,12 @@ public class Client extends Thread
 	 */
 	private synchronized void sendWriteReceive(String filename)
 	{
+		//Check if the user is trying to write a file that does not exist
+		if(!Files.exists(Paths.get(directory.getAbsolutePath() + "\\" + filename))){
+			System.out.println("Failed to write: 0501 - File does not exist: " + filename);
+			System.out.println("Stopping thread process . . .");
+			System.exit(0);
+		}
 		//Creates write request DatagramPacket and sends it
 		DatagramPacket message = buildRequest("ocTeT", filename, ActionType.WRITE);	
 		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
