@@ -269,7 +269,7 @@ public class Client extends Thread
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		while(available >= 0) {
+		while(available > 0) {
 			//Receives response from server
 			receiveMsg = new byte[4];
 
