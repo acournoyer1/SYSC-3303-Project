@@ -237,12 +237,25 @@ public class Client extends Thread
 	 */
 	private synchronized void sendWriteReceive(String filename)
 	{
+		File f = new File(directory.getAbsolutePath() + "\\" + filename);
 		//Check if the user is trying to write a file that does not exist
-		if(!Files.exists(Paths.get(directory.getAbsolutePath() + "\\" + filename))){
+		if(!f.exists()){
 			System.out.println("Failed to write: 0501 - File does not exist: " + filename);
 			System.out.println("Stopping thread process . . .");
 			System.exit(0);
 		}
+		
+		//Creates fileInputStream with given filename that will be sent
+		byte[] data = new byte[512];
+		FileInputStream is = null;		
+		try {
+			is = new FileInputStream(directory.getAbsolutePath() + "\\" + filename);
+		} catch (FileNotFoundException e2) {
+			System.out.println("Failed to write: 0502 - Access Violation. " + filename);
+			System.out.println("Stopping thread process . . .");
+			System.exit(0);
+		}
+		
 		//Creates write request DatagramPacket and sends it
 		DatagramPacket message = buildRequest("ocTeT", filename, ActionType.WRITE);	
 		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
@@ -250,15 +263,6 @@ public class Client extends Thread
 			socket.send(message);	
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
-
-		//Creates fileInputStream with given filename that will be sent
-		byte[] data = new byte[512];
-		FileInputStream is = null;		
-		try {
-			is = new FileInputStream(directory.getAbsolutePath() + "\\" + filename);
-		} catch (FileNotFoundException e2) {
-			e2.printStackTrace();
 		}
 		byte[] receiveMsg = new byte[4];
 		byte i = 0;
