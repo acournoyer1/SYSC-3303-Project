@@ -206,9 +206,11 @@ public class Server extends Thread {
 	@Override
 	public void run()
 	{
-		while(directory == null)
+		directory = getDirectory();
+		if(directory == null)
 		{
-			directory = getDirectory();
+			System.out.println("Creation of server cancelled.");
+			return;
 		}
 		this.sendReceive();
 	}
@@ -304,6 +306,11 @@ public class Server extends Thread {
 					socket.send(msg);
 				} catch (IOException e) {
 					e.printStackTrace();
+				}
+				try {
+					available = is.available();
+				} catch (IOException e1) {
+					e1.printStackTrace();
 				}
 			}//END Loop
 			try {

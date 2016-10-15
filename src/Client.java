@@ -1,7 +1,6 @@
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -308,6 +307,11 @@ public class Client extends Thread
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			try {
+				available = is.available();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 		}//END Loop
 		try {
 			is.close();
@@ -338,9 +342,11 @@ public class Client extends Thread
 	@Override 
 	public void run()
 	{
-		while(directory == null)
+		directory = getDirectory();
+		if(directory == null)
 		{
-			directory = getDirectory();
+			System.out.println("Creation of client cancelled.");
+			return;
 		}
 		boolean newRequest = true;
 		while(newRequest)
