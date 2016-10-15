@@ -186,22 +186,13 @@ public class Server extends Thread {
 		}
 		
 		/*
-		*   Sends request to intermediate host then writes to the file  
+		*   Sends data back to the client and waits for an ack  
 		*/
 		private synchronized void sendReceive()
 		{
-			//Sends request to the intermediate host
-			DatagramPacket message = buildRequest("ocTeT", filename);
-	    		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
-	    		try {
-	    			socket.send(message);
-	    		} catch (IOException e) {
-	    			e.printStackTrace();
-	    		}
-		
-			//Writes to the file
-	    		byte[] data = new byte[512];
-	    		FileInputStream is = null;
+			//Reads from the file	
+			byte[] data = new byte[512];
+	    	FileInputStream is = null;
 			try {
 				is = new FileInputStream(directory.getAbsolutePath() + "\\" + filename);
 			} catch (FileNotFoundException e2) {
@@ -216,7 +207,18 @@ public class Server extends Thread {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			//Continually writes data to the file until no more data is available
+			try {
+				is.read(data);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			DatagramPacket msg = buildData(data, i++, hostPort);
+			try {
+				socket.send(msg);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			//Continually reads data from the file until no more data is available
 			while(available > 0) {
 				receiveMsg = new byte[4];
 		
@@ -231,10 +233,10 @@ public class Server extends Thread {
 				
 	    			try {
 	    				is.read(data);
-				} catch (IOException e1) {
+	    			} catch (IOException e1) {
 	    				e1.printStackTrace();
 	    			}
-	    			DatagramPacket msg = buildData(data, i++, receivePacket.getPort());
+	    			msg = buildData(data, i++, hostPort);
 	    			try {
 	    				socket.send(msg);
 	    			} catch (IOException e) {
@@ -242,43 +244,6 @@ public class Server extends Thread {
 	    			}
 			}//END Loop
 		}
-		
-		/*
-		*  Builds the DatagramPacket that contains a request
-		*/
-		private synchronized DatagramPacket buildRequest(String mode, String filename)
-		{
-			//Initiates packet with 01 for read 
-	        	byte[] request = new byte[100];
-	        	request[0] = 0;
-	        	request[1] = 1;
-	        
-	        	int i = 2;
-	        
-			//Adds the filename to the byte array
-	        	if(filename.getBytes() != null) {
-	                	for(byte b: filename.getBytes()) {
-	                		request[i++] = b;
-	            		}
-	        	}
-	        	request[i++] = 0;
-			
-			//Adds the mode to the byte array
-	        	if(mode.getBytes() != null) {
-	            		for(byte b: mode.getBytes()) {
-	                		request[i++] = b;
-	            		}
-	        	}
-	        	request[i++] = 0;
-			
-			//Creates the DatagramPacket and returns it
-	        	try {
-	        		return new DatagramPacket(request, request.length, InetAddress.getLocalHost(), hostPort);
-	        	} catch (UnknownHostException e) {
-	        		e.printStackTrace();
-	        		return null;
-	        	}
-	    	}
 		
 		/*
 		*    Builds a DatagramPacket containing the data
@@ -341,17 +306,19 @@ public class Server extends Thread {
 		*/
 		private synchronized void sendReceive()
 		{
-			//Builds request packet and sends it to the intermediate host
-			DatagramPacket message = buildRequest("ocTeT", filename);
-	    		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
-	    		System.out.println(filename);
-				System.out.println(directory.getAbsolutePath() + "\\" + filename);
-	    		try {
-	    			socket.send(message);
-	    		} catch (IOException e) {
-	    			e.printStackTrace();
-	    		}
-		
+			byte[] b = {0, 4, 0, 0};
+			DatagramPacket ack = null;
+			try {
+				ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), hostPort);
+			} catch (UnknownHostException e2) {
+				e2.printStackTrace();
+			}
+			
+			try {
+				socket.send(ack);
+			} catch (IOException e2) {
+				e2.printStackTrace();
+			}
 			//Sets up fileOuputStream
 	    		int index = -1;
 	    		byte[] receiveMsg;
@@ -372,81 +339,46 @@ public class Server extends Thread {
 	    			} catch (IOException e) {
 	    				e.printStackTrace();
 	    			}
-		
-	    			for(int i = 4; i < receiveMsg.length; i++) {
-	    				if(receiveMsg[i] == 0){
-	    					index = i;
-	    					i = receiveMsg.length;
-	    				}
-	    			}
+	    			
+	    			//Copies the data into a new array
+	    	    	byte[] data = new byte[512];
+	    	    	for(int i = 0, j = 4; i < data.length; i++, j++)
+	    	    	{
+	    	    		data[i] = receiveMsg[j];
+	    	    	}
+	    		
+	    	    	for(int i = 0; i < data.length; i++) {
+	    	    		if(data[i] == 0){
+	    	    			index = i;
+	    	    			i = data.length;
+	    	    		}
+	    	    	}
+	    			
 				//Writes data to the file
 	    			if(index == -1){
 	    				try {
-	    					fos.write(receiveMsg);
+	    					fos.write(data);
 	    				} catch (IOException e) {
 	    					e.printStackTrace();
 	    				}
 
 					//Creates and sends acknowledgement to the intermediate host
-					byte[] b = {0, 4, 0, 0};
-	    				try {			
-	    					DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
-	    					try {
-	    						socket.send(ack);
-	    					}catch (IOException IOE){
-	    						IOE.printStackTrace();
-	    						System.exit(1);
-	    					}
-	    				} catch (UnknownHostException e){
-	    					e.printStackTrace();
-						System.exit(1);
+	    				try {
+	    					socket.send(ack);
+	    				}catch (IOException IOE){
+	    					IOE.printStackTrace();
+	    					System.exit(1);
 	    				}
 				//Writes the last bit of data to the file
 	    			} else{
 	    				try {
-	    					fos.write(receiveMsg, 0, index);
+	    					fos.write(data, 0, index);
 	    				} catch (IOException e) {
 	    					e.printStackTrace();
 	    				}
 	    			}
 	    		}//END While
 		}
-		
-		/*
-		*  Builds the DatagramPacket that contains a request
-		*/
-		private synchronized DatagramPacket buildRequest(String mode, String filename)
-	    	{
-			//Initializes the byte array with a write request(02)
-	       		byte[] request = new byte[100];
-	       		request[0] = 0;
-	        	request[1] = 2;
-	        
-			//Adds the filename to the byte array
-	        	int i = 2;
-	        	if(filename.getBytes() != null) {       	
-	            		for(byte b: filename.getBytes()) {
-	              			request[i++] = b;
-	            		}//endFor 
-	        	}
-	        	request[i++] = 0;
-	        
-			//Adds the mode to the byte array
-	        	if(mode.getBytes() != null) {
-	            		for(byte b: mode.getBytes()) {
-	                		request[i++] = b;
-	            		}
-	        	}
-	       		request[i++] = 0;
-	        
-			//Creates the DatagramPacket with the byte array and then sends it to the intermediate host
-	        	try {
-	        		return new DatagramPacket(request, request.length, InetAddress.getLocalHost(), hostPort);
-	        	} catch (UnknownHostException e) {
-	        		e.printStackTrace();
-	        		return null;
-	        	}
-	    	}
 		
 		@Override
 		public void run()

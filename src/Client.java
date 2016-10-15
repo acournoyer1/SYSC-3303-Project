@@ -89,7 +89,7 @@ public class Client extends Thread
         msg[1] = 3;				
         msg[3] = blockNumber;
 	
-	//Goes throught the data and adds it to the message
+	//Goes through the data and adds it to the message
 	for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)	
 	{
 		msg[k] = data[j];
@@ -141,18 +141,25 @@ public class Client extends Thread
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+    		
+    	//Copies the data into a new array
+    	byte[] data = new byte[512];
+    	for(int i = 0, j = 4; i < data.length; i++, j++)
+    	{
+    		data[i] = receiveMsg[j];
+    	}
 	
-    		for(int i = 4; i < receiveMsg.length; i++) {
-			if(receiveMsg[i] == 0){
-				index = i;
-				i = receiveMsg.length;
-			}
-		}
+    	for(int i = 0; i < data.length; i++) {
+    		if(data[i] == 0){
+    			index = i;
+    			i = data.length;
+    		}
+    	}
 		
 		//Writes received message into the file
 		if(index == -1){			
 			try {
-				fos.write(receiveMsg);
+				fos.write(data);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -175,7 +182,12 @@ public class Client extends Thread
 		//Writes last bit of the received data
 		else{		
 			try {
-				fos.write(receiveMsg, 0, index);
+				fos.write(data, 0, index);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			try {
+				fos.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
