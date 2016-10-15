@@ -58,134 +58,9 @@ public class Server extends Thread {
 			}
 			System.out.println("Request received from Host: " + Converter.convertMessage(msg));
 			
-			//Checks if request is valid (read or write)
-			if(!(msg[0] == 0 && (msg[1] == 1 || msg[1] == 2)))
-			{
-				System.out.println("Request is invalid.");
-				System.exit(1);
-			}
-
-			int zeroCount = 0;
-			int count = 0;
-			for(int i = 2; i < msg.length; i++)
-			{
-				if(zeroCount < 2)
-				{
-					if(msg[i] == 0 && count == 0)
-					{
-						System.out.println("Request is invalid.");
-						System.exit(1);
-					}
-					else if(msg[i] == 0)
-					{
-						count = 0;
-						zeroCount++;
-					}
-					else
-					{
-						count++;
-					}
-				}
-				else
-				{
-					if(msg[i] != 0)
-					{
-						System.out.println("Request is invalid.");
-						System.exit(1);
-					}
-				}
-			}
-
-			//Extracts the filename
-			int index = -1;
-			for(int i = 2; i < msg.length; i++)
-			{
-				if(msg[i] == 0)
-				{
-					index = i;
-					i = msg.length;
-				}
-			}
-			byte[] b = new byte[index - 2];
-			int j = 2;
-			for(int i = 0; i < b.length; i++, j++)
-			{
-				b[i] = msg[j];
-			}
-			//Turns filename that is a byte array into a string
-			String filename = new String(b);
-			//Build "file" object from the specified filepath
-			File f = new File(this.directory + "\\" + filename);
-			Path path = Paths.get(this.directory + "\\" + filename);
-			//Creates new read thread with filename
-			if(msg[1] == 1)
-			{
-				//Check if file exists
-				if(!Files.exists(path))
-				{
-					System.out.println("Failed to read: 0501 - File not found. " + filename);
-					System.out.println("Sending error packet . . .");
-					createSendError(new Byte("1"), receivedPacket, receiveSocket);
-				}
-				//Check if the file can be read
-				else if(!Files.isReadable(path)){
-					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
-					createSendError(new Byte("2"), receivedPacket, receiveSocket);
-				}
-				//No errors, send valid response
-				else{
-					System.out.println("The request is a valid read request.");
-					System.out.println(filename);
-					addThread(new ReadThread(receivedPacket.getPort(), filename));
-				}
-			}
-			//Creates new write thread with filename
-			else
-			{
-				//Check if the file already exists
-				 if(Files.exists(path)){
-					System.out.println("Failed to write: 0506 - File already exists " + filename);
-					System.out.println("Sending error packet . . .");
-					createSendError(new Byte("6"), receivedPacket, receiveSocket);
-				}
-				//Check if can write
-				 else if(Files.isWritable(path)){
-					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
-					System.out.println("Sending error packet . . .");
-					createSendError(new Byte("2"), receivedPacket, receiveSocket);
-				}
-				//Check if there is enough space on the server
-				else if(f.getParentFile().getFreeSpace() < receivedPacket.getData().length){
-					System.out.println("Failed to write: 0503 - Not enough disk space. " + filename);
-					System.out.println("Sending error packet . . .");
-					createSendError(new Byte("3"), receivedPacket, receiveSocket);
-				}
-
-				else{
-					System.out.println("The request is a valid write request.");
-					System.out.println(filename);
-					addThread(new WriteThread(receivedPacket.getPort(), filename));
-				}
-			}
+			addThread(new ControlThread(receivedPacket));
 		}
 	}
-
-	private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket){
-		byte[] b = {0, 5, 0, errorNum};
-		try {			
-			DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
-			try {
-				socket.send(ack);
-			}catch (IOException IOE){
-				IOE.printStackTrace();
-				System.exit(1);
-			}
-		} catch (UnknownHostException e){
-			e.printStackTrace();
-			System.exit(1);
-		}
-	}
-
 
 	/*
 	 * Enables the user to select which directory will act as the server's file system
@@ -247,6 +122,151 @@ public class Server extends Thread {
 	{
 		threads.add(t);
 		t.start();
+	}
+	
+	private void removeThread(Thread t)
+	{
+		threads.remove(t);
+	}
+	
+	private class ControlThread extends Thread
+	{
+		private DatagramPacket packet;
+		
+		public ControlThread(DatagramPacket packet)
+		{
+			this.packet = packet;
+		}
+		
+		@Override
+		public void run()
+		{
+			byte[] msg = packet.getData();
+			//Checks if request is valid (read or write)
+			if(!(msg[0] == 0 && (msg[1] == 1 || msg[1] == 2)))
+			{
+				System.out.println("Request is invalid.");
+				System.exit(1);
+			}
+
+			int zeroCount = 0;
+			int count = 0;
+			for(int i = 2; i < msg.length; i++)
+			{
+				if(zeroCount < 2)
+				{
+					if(msg[i] == 0 && count == 0)
+					{
+						System.out.println("Request is invalid.");
+						System.exit(1);
+					}
+					else if(msg[i] == 0)
+					{
+						count = 0;
+						zeroCount++;
+					}
+					else
+					{
+						count++;
+					}
+				}
+				else
+				{
+					if(msg[i] != 0)
+					{
+						System.out.println("Request is invalid.");
+						System.exit(1);
+					}
+				}
+			}
+
+			//Extracts the filename
+			int index = -1;
+			for(int i = 2; i < msg.length; i++)
+			{
+				if(msg[i] == 0)
+				{
+					index = i;
+					i = msg.length;
+				}
+			}
+			byte[] b = new byte[index - 2];
+			int j = 2;
+			for(int i = 0; i < b.length; i++, j++)
+			{
+				b[i] = msg[j];
+			}
+			//Turns filename that is a byte array into a string
+			String filename = new String(b);
+			//Build "file" object from the specified filepath
+			File f = new File(directory + "\\" + filename);
+			Path path = Paths.get(directory + "\\" + filename);
+			//Creates new read thread with filename
+			if(msg[1] == 1)
+			{
+				//Check if file exists
+				if(!Files.exists(path))
+				{
+					System.out.println("Failed to read: 0501 - File not found. " + filename);
+					System.out.println("Sending error packet . . .");
+					createSendError(new Byte("1"), packet, receiveSocket);
+				}
+				//Check if the file can be read
+				else if(!Files.isReadable(path)){
+					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
+					createSendError(new Byte("2"), packet, receiveSocket);
+				}
+				//No errors, send valid response
+				else{
+					System.out.println("The request is a valid read request.");
+					addThread(new ReadThread(packet.getPort(), filename));
+				}
+			}
+			//Creates new write thread with filename
+			else
+			{
+				//Check if the file already exists
+				 if(Files.exists(path)){
+					System.out.println("Failed to write: 0506 - File already exists " + filename);
+					System.out.println("Sending error packet . . .");
+					createSendError(new Byte("6"), packet, receiveSocket);
+				}
+				//Check if can write
+				 else if(Files.isWritable(path)){
+					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
+					System.out.println("Sending error packet . . .");
+					createSendError(new Byte("2"), packet, receiveSocket);
+				}
+				//Check if there is enough space on the server
+				else if(f.getParentFile().getFreeSpace() < packet.getData().length){
+					System.out.println("Failed to write: 0503 - Not enough disk space. " + filename);
+					System.out.println("Sending error packet . . .");
+					createSendError(new Byte("3"), packet, receiveSocket);
+				}
+
+				else{
+					System.out.println("The request is a valid write request.");
+					addThread(new WriteThread(packet.getPort(), filename));
+				}
+			}
+			removeThread(this);
+		}
+
+		private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket){
+			byte[] b = {0, 5, 0, errorNum};
+			try {			
+				DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+				try {
+					socket.send(ack);
+				}catch (IOException IOE){
+					IOE.printStackTrace();
+					System.exit(1);
+				}
+			} catch (UnknownHostException e){
+				e.printStackTrace();
+				System.exit(1);
+			}
+		}
 	}
 
 	/*
@@ -375,6 +395,7 @@ public class Server extends Thread {
 		public void run()
 		{
 			sendReceive();
+			removeThread(this);
 		}
 	}
 
@@ -399,6 +420,11 @@ public class Server extends Thread {
 			} catch (SocketException e) {
 				e.printStackTrace();
 			}
+		}
+		
+		public String getFilename()
+		{
+			return filename;
 		}
 
 		/*
@@ -487,6 +513,7 @@ public class Server extends Thread {
 		public void run()
 		{
 			sendReceive();
+			removeThread(this);
 		}
 	}
 
