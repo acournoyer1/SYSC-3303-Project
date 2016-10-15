@@ -102,7 +102,7 @@ public class Server extends Thread {
 				}
 			}
 			byte[] b = new byte[index - 2];
-			int j = 4;
+			int j = 2;
 			for(int i = 0; i < b.length; i++, j++)
 			{
 				b[i] = msg[j];
@@ -114,14 +114,12 @@ public class Server extends Thread {
 			if(msg[1] == 1)
 			{
 				System.out.println("The request is a valid read request.");
-				System.out.println(filename);
 				addThread(new ReadThread(receivedPacket.getPort(), filename));
 			}
 			//Creates new write thread with filename
 			else
 			{
 				System.out.println("The request is a valid write request.");
-				System.out.println(filename);
 				addThread(new WriteThread(receivedPacket.getPort(), filename));
 			}
 		}
@@ -205,8 +203,6 @@ public class Server extends Thread {
 	    		byte[] data = new byte[512];
 	    		FileInputStream is = null;
 			try {
-				System.out.println(filename);
-				System.out.println(directory.getAbsolutePath() + "\\" + filename);
 				is = new FileInputStream(directory.getAbsolutePath() + "\\" + filename);
 			} catch (FileNotFoundException e2) {
 				e2.printStackTrace();
