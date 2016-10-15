@@ -16,6 +16,7 @@ public class Server extends Thread {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
 	private File directory;
+	private boolean running;
 	
 	//Well-known server port number
 	private static final int PORT_NUMBER = 69;
@@ -25,6 +26,7 @@ public class Server extends Thread {
 	*/
 	public Server()
 	{
+		running = true;
 		directory = null;
 		threads = new ArrayList<Thread>();
 		try {
@@ -39,7 +41,7 @@ public class Server extends Thread {
 	*/
 	public synchronized void sendReceive()
 	{
-		while(true)
+		while(running)
 		{
 			//Waits to receive DatagramPacket from intermediate host
 			System.out.println("Server waiting...");
@@ -124,7 +126,7 @@ public class Server extends Thread {
 			}
 		}
 	}
-	
+		
 	/*
      * Enables the user to select which directory will act as the server's file system
      */
