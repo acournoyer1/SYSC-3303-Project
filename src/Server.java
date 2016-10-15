@@ -205,7 +205,7 @@ public class Server extends Thread {
 			if(msg[1] == 1)
 			{
 				//Check if file exists
-				if(!Files.exists(path))
+				if(!f.exists())
 				{
 					System.out.println("Failed to read: 0501 - File not found. " + filename);
 					System.out.println("Sending error packet . . .");
