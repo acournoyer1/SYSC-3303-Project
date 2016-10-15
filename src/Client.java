@@ -209,26 +209,26 @@ public class Client extends Thread
     		e.printStackTrace();
     	}
 	
-	//Creates fileInputStream with given filename that will be sent
+    	//Creates fileInputStream with given filename that will be sent
     	byte[] data = new byte[512];
     	FileInputStream is = null;		
-	try {
-		is = new FileInputStream(directory.getAbsolutePath() + "\\" + filename);
-	} catch (FileNotFoundException e2) {
-		e2.printStackTrace();
-	}
-	byte[] receiveMsg = new byte[4];
-	byte i = 0;
+    	try {
+    		is = new FileInputStream(directory.getAbsolutePath() + "\\" + filename);
+    	} catch (FileNotFoundException e2) {
+    		e2.printStackTrace();
+    	}
+    	byte[] receiveMsg = new byte[4];
+    	byte i = 0;
 	
-	int available = 0;
-	try {
-		available = is.available();
-	} catch (IOException e1) {
-		e1.printStackTrace();
-	}
-	while(available > 0) {
+    	int available = 0;
+    	try {
+    		available = is.available();
+    	} catch (IOException e1) {
+    		e1.printStackTrace();
+    	}
+    	while(available > 0) {
 		//Receives response from server
-		receiveMsg = new byte[4];
+    		receiveMsg = new byte[4];
 	
     		DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);	
     		try {
@@ -239,7 +239,7 @@ public class Client extends Thread
 
     		System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
 		
-		//Writes data into the file
+		//Reads data from the file
     		try {				
     			is.read(data);
     		} catch (IOException e1) {
@@ -252,6 +252,11 @@ public class Client extends Thread
     			e.printStackTrace();
     		}
 	}//END Loop
+    	try {
+			is.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     }
     
     
@@ -285,11 +290,11 @@ public class Client extends Thread
     	{
     		newRequest = false;
     		Scanner s = new Scanner(System.in);
-    		System.out.println("Please write the name of the file you would like to read/write.");
-    		String filename = s.nextLine();
     		System.out.println("For a read request, enter r or read.");
     		System.out.println("For a write request, enter w or write.");
     		String request = s.next();
+    		System.out.println("Please write the name of the file you would like to read/write.");
+    		String filename = s.next();
     		if(request.equals("read") || request.equals("R") || request.equals("r"))
     		{
     			sendReadReceive(filename);

@@ -243,6 +243,11 @@ public class Server extends Thread {
 	    				e.printStackTrace();
 	    			}
 			}//END Loop
+			try {
+				is.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		
 		/*
@@ -376,6 +381,11 @@ public class Server extends Thread {
 	    				} catch (IOException e) {
 	    					e.printStackTrace();
 	    				}
+	    				try {
+							fos.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 	    			}
 	    		}//END While
 		}
