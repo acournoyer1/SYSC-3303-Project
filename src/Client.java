@@ -237,6 +237,13 @@ public class Client extends Thread
 	 */
 	private synchronized void sendWriteReceive(String filename)
 	{
+		//Check if the user is trying to write a file that does not exist
+		if(!Files.exists(Paths.get(directory.getAbsolutePath() + "\\" + filename))){
+			System.out.println("Failed to write: 0501 - File does not exist: " + filename);
+			System.out.println("Stopping thread process . . .");
+			System.exit(0);
+		}
+		
 		//Creates write request DatagramPacket and sends it
 		DatagramPacket message = buildRequest("ocTeT", filename, ActionType.WRITE);	
 		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
@@ -245,7 +252,7 @@ public class Client extends Thread
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
+		
 		//Creates fileInputStream with given filename that will be sent
 		byte[] data = new byte[512];
 		FileInputStream is = null;		
@@ -269,7 +276,6 @@ public class Client extends Thread
 
 			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);	
 			try {
-				System.out.println("Waiting for response.");
 				socket.receive(receivePacket);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -296,20 +302,21 @@ public class Client extends Thread
 			System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
 
 			//Reads data into the file
-			try {				
+			try {			
 				is.read(data);
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
 			DatagramPacket msg = buildData(data, i++, receivePacket.getPort());
 			try {
-				System.out.println("Sending data. . .");
+				System.out.println("test");
 				socket.send(msg);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}//END Loop
 		try {
+			System.out.println("hello");
 			is.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -355,12 +362,10 @@ public class Client extends Thread
 			if(request.equals("read") || request.equals("R") || request.equals("r"))
 			{
 				sendReadReceive(filename);
-				System.out.println("Read request");
 			}
 			else if(request.equals("write") || request.equals("W") || request.equals("w"))
 			{
 				sendWriteReceive(filename);
-				System.out.println("Write request");
 			}
 			else
 			{
