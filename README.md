@@ -81,7 +81,10 @@ Work Done:
 	->Dan
 
 	->Ryan 	
-			
+	- Built error checking algorithm
+	- Debugging and fixing Iteration 1 errors
+	- Test cases
+		
 	->Alex
 	
 	->Brendan
