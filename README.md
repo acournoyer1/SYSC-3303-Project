@@ -88,6 +88,6 @@ Work Done:
 	->Alex
 	
 	->Brendan
-
+	- Timing Diagrams
 	->Daman
 	-Help debug client and server code and create readme
