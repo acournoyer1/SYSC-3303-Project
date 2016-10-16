@@ -71,3 +71,19 @@ Diagrams:
 	->UML Diagram.png
 	->WriteRequest.pdf
 	->l2.class.violet.html (UML class diagrams)
+	
+	
+	
+
+Work Done:
+
+Dan
+
+Ryan 	
+			
+Alex
+	
+Brendan
+
+Daman
+	-Help debug client and server code and create readme
