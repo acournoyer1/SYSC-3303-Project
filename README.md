@@ -20,36 +20,36 @@ Setup instructions:
 
 Testing instructions: 
 	
-	*NOTE* These instructions are to be followed after reaching the prompt in client.java that asks the user to choose read or write
-		Each step is testing for a different error, therefore
+	*NOTE* Each of these instructions are to be followed after reaching the prompt in client.java that asks the user to choose read or write
+	Each step is testing for a different error, therefore
 	
-	1. In order test for File not Found (error 1):
+	-In order test for File not Found (error 1):
 		-Choose read and type in fileNotFound.txt for the file name
 		-The server should respond with an error 0501
 		
-	2. In order to test for Access violation (error 2):
-		-Choose read and type in accessDenied.txt for the file name
-			-In the project folder their is a file called accessDenied.txt and it has all its read and write permissions denied.
-			-In the case that the file does not have its permissions denied, you can:
-				-Edit the file permissions by right-clicking the file --> properties --> Security tab --> Edit --> Check off deny read or write
+	-In order to test for Access violation (error 2):
+		-In the project folder their is a file called accessDenied.txt and its permissions need to be denied. 
+			-In order to deny permissions on the file:
+				-Right-clicking the file --> properties --> Security --> Edit --> Check off deny read/write
+		-In the client thread, choose read and type in accessDenied.txt for the file name
 		-The server should respond with error code 0502
 	
-	3. In order to test for file already exists (error 6):
+	-In order to test for file already exists (error 6):
 		-Choose write and type in test.txt
 		-The server should respond with error code 0506
 	
-	4. In order to test for disk full:
+	-In order to test for disk full:
 		-Restart all the threads and choose a filled drive as the source directory for both the server and client. (for testing we used a filled USB with a single test.txt file in it)
 		- A partition can also be created on the drive in order to test (make a test.txt file in said partition)
 		-Choose write and type in test.txt
 		-The server should respond with error code 0503
 	
 	
-	
+	Files in this project: 
 	
 Client.java: 
 
-	-> Creates an instance of client which sends and receives files the server through an intermediate host
+	-> Creates an instance of client which sends and receives files to the server through an intermediate host
 
 IntermediateHost.java:
 	
@@ -59,7 +59,15 @@ Server.java:
 
 	-> The server receives messages from intermediate host and responds
 	-> Sends a response that changes depending on messages (0301 for read; 0400 for write; 	exits for invalid)
+	-> Checks for tftp error codes 1, 2, 3 and 6 and returns an error packet accordingly
 	
 Converter.java:
 
 	->Converts a byte array into a string
+
+Diagrams:
+	->ReadRequest.pdf
+	->UCM.pdf
+	->UML Diagram.png
+	->WriteRequest.pdf
+	->l2.class.violet.html (UML class diagrams)
