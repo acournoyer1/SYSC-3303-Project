@@ -66,6 +66,7 @@ Converter.java:
 	->Converts a byte array into a string
 
 Diagrams:
+
 	->ReadRequest.pdf
 	->UCM.pdf
 	->UML Diagram.png
@@ -77,13 +78,13 @@ Diagrams:
 
 Work Done:
 
-Dan
+	->Dan
 
-Ryan 	
+	->Ryan 	
 			
-Alex
+	->Alex
 	
-Brendan
+	->Brendan
 
-Daman
+	->Daman
 	-Help debug client and server code and create readme
