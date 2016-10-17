@@ -201,6 +201,8 @@ public class Server extends Thread {
 			//Build "file" object from the specified filepath
 			File f = new File(directory + "\\" + filename);
 			Path path = Paths.get(directory + "\\" + filename);
+			
+			//If Else determine Read request or Write request
 			//Creates new read thread with filename
 			if(msg[1] == 1)
 			{
