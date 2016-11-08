@@ -251,6 +251,7 @@ public class Server extends Thread {
 					addThread(new WriteThread(packet.getPort(), filename));
 				}
 			}
+			//Close and Erase this instance of the control thread as it is no longer useful
 			removeThread(this);
 		}
 
@@ -273,13 +274,14 @@ public class Server extends Thread {
 
 	/*
 	 *   Creates a thread that will process a read request
+	 *   -- data being read from Server and sent to Client
 	 */
 	private class ReadThread extends Thread
 	{
 		private DatagramSocket socket;
 		private int hostPort;
 		private String filename;
-
+		
 		/*
 		 *   Creates new socket and initiates filename and port
 		 */
@@ -311,7 +313,8 @@ public class Server extends Thread {
 			}
 			byte[] receiveMsg = new byte[4];
 			byte i = 0;
-
+			byte ACKcount=0; //used to ensure no duplicate ACKs received
+			
 			int available = 0;
 			try {
 				available = is.available();
@@ -337,12 +340,12 @@ public class Server extends Thread {
 				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 				try {
 					socket.receive(receivePacket);
+					ACKcount++;  //another ACK received.
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-
-				System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
 				
+				System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
 				try {
 					is.read(data);
 				} catch (IOException e1) {
@@ -447,6 +450,9 @@ public class Server extends Thread {
 			} catch (IOException e2) {
 				e2.printStackTrace();
 			}
+			//Sets up Error Detection Variables
+			int blockID=-1;
+			boolean duplicate;
 			//Sets up fileOuputStream
 			int index = -1;
 			byte[] receiveMsg;
@@ -459,6 +465,9 @@ public class Server extends Thread {
 
 			//Continually write to the file
 			while(index == -1) {
+				
+				duplicate=false; //resets the packet duplicate checker;
+				
 				//Receives data from intermediate host
 				receiveMsg = new byte[516];
 				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
@@ -468,47 +477,63 @@ public class Server extends Thread {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				//Copies the data into a new array
-				byte[] data = new byte[512];
-				for(int i = 0, j = 4; i < data.length; i++, j++)
-				{
-					data[i] = receiveMsg[j];
+				
+				//Checks for errors
+				if (blockID == receivePacket.getData()[3]){
+					//condition indicates duplicate
+					// skip to beginning of loop; 
+					duplicate = true;
 				}
+				else if (receivePacket.getData()[3] == blockID +1){
+					blockID = receivePacket.getData()[3];
+				} else { 				
+					System.out.println("Something wierd happenned in duplicate detection"+receivePacket.getData()[3]+" and prev blockID="+ blockID);
+					System.exit(1);
+				}
+				//only run if not duplicate packet. 
+				if(!duplicate){
+					//Copies the data into a new array
+					byte[] data = new byte[512];
+					for(int i = 0, j = 4; i < data.length; i++, j++)
+					{
+						data[i] = receiveMsg[j];
+					}
 
-				for(int i = 0; i < data.length; i++) {
-					if(data[i] == 0){
-						index = i;
-						i = data.length;
+					for(int i = 0; i < data.length; i++) {
+						if(data[i] == 0){
+							index = i;
+							i = data.length;
+						}
 					}
-				}
-				//Writes data to the file
-				if(index == -1){
-					try {
-						fos.write(data);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+					//Writes data to the file
+					if(index == -1){
+						try {
+							fos.write(data);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 
-					//Creates and sends acknowledgement to the intermediate host
-					try {
-						socket.send(ack);
-					}catch (IOException IOE){
-						IOE.printStackTrace();
-						System.exit(1);
+						//Creates and sends acknowledgement to the intermediate host
+						try {
+							socket.send(ack);
+						}catch (IOException IOE){
+							IOE.printStackTrace();
+							System.exit(1);
+						}
+						//Writes the last bit of data to the file
+					} else{
+						try {
+							fos.write(data, 0, index);
+						} catch (IOException e) {
+		    					e.printStackTrace();
+		    				}
+						try {
+							fos.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 					}
-					//Writes the last bit of data to the file
-				} else{
-					try {
-						fos.write(data, 0, index);
-					} catch (IOException e) {
-	    					e.printStackTrace();
-	    				}
-					try {
-						fos.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
+				}//end if (!duplicate);	
 			}//END While
 		}
 		@Override

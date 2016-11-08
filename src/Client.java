@@ -19,7 +19,7 @@ public class Client extends Thread
 	private DatagramSocket socket;
 	private File directory;
 	private boolean verbose;
-
+	//TODO: private int prevBlockNum;
 	/*
 	 * Constructor for objects of class Client
 	 */
@@ -130,7 +130,11 @@ public class Client extends Thread
 			System.out.println("Stopping thread process . . .");
 			System.exit(0);
 		}
-			
+		
+		//Error Handling Variables:
+		int blockID=-1;
+		boolean duplicate=false;
+		
 		//Creates a file where the data read from sever is stored
 		int index = -1;
 		byte[] receiveMsg;
@@ -144,7 +148,10 @@ public class Client extends Thread
 		}
 
 		//Keeps reading data until server is done sending for the request
-		while(index == -1) {	
+		while(index == -1) {
+			
+			duplicate = false; 
+
 			//Receives the DatagramPacket sent from server/intermediate host
 			receiveMsg = new byte[516];
 			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
@@ -154,17 +161,19 @@ public class Client extends Thread
 				e.printStackTrace();
 			}
 			
-			String code = "";
-			switch(receivePacket.getData()[3]){
-			case 1:
-				code = "File not found";
-				break;
-			case 2:
-				code = "Access Violation";
-				break;
-			}
-
-			if(receivePacket.getData()[3] == 1 || receivePacket.getData()[3] == 2 && receivePacket.getData()[1] == 5){
+			//Check for block received is error packet:
+			if((receivePacket.getData()[3] == 1 || receivePacket.getData()[3] == 2) && receivePacket.getData()[1] == 5){
+				//TODO: code not necessary to run until known that getData()[1]==5;
+				String code = "";
+				switch(receivePacket.getData()[3]){
+					case 1:
+						code = "File not found";
+						break;
+					case 2:
+						code = "Access Violation";
+						break;
+				}
+				
 				System.out.println("Error packet received. Code: 050" + receivePacket.getData()[3] + " " + code + ". Stopping request.");
 				try {
 					fos.close();
@@ -178,58 +187,77 @@ public class Client extends Thread
 				}
 				System.exit(0);
 			}
+			//TODO: clean this up a bit remove extraneous conditions 
+			//Error Handling Iteration 3: 
+			if (receivePacket.getData()[3] > blockID +1){
+				//condition indicates packet delay, shouldn't happen because next packet will never be sent without an ack
+			}
+			else if (receivePacket.getData()[3]==blockID){
+				//condition indicates Packet Duplication;
+				//don't send ack and hope that the message that were waiting on is sent
+				//skip to next iteration of loop;
+				duplicate=true;
+			}
+			else if (receivePacket.getData()[3]< blockID){
+				//condition indicates a delayed duplicate packet. 
+				//skip to next iteration of loop
+				duplicate=true;
+			} else {
+				blockID= receivePacket.getData()[3]; 
+			}
+			if(!duplicate){
+				//Copies the data into a new array
+		    	byte[] data = new byte[512];
+		    	for(int i = 0, j = 4; i < data.length && j<receiveMsg.length; i++, j++)
+		    	{
+		    		data[i] = receiveMsg[j];
+		    	}
 			
-			//Copies the data into a new array
-	    	byte[] data = new byte[512];
-	    	for(int i = 0, j = 4; i < data.length; i++, j++)
-	    	{
-	    		data[i] = receiveMsg[j];
-	    	}
-		
-	    	for(int i = 0; i < data.length; i++) {
-	    		if(data[i] == 0){
-	    			index = i;
-	    			i = data.length;
-	    		}
-	    	}
+		    	for(int i = 0; i < data.length; i++) {
+		    		if(data[i] == 0){
+		    			index = i;
+		    			i = data.length;
+		    		}
+		    	}
 
-			//Writes received message into the file
-			if(index == -1){			
-				try {
-					fos.write(data);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-
-				//Creates and sends back an acknowledgment 
-				byte[] b = {0, 4, 0, 0};	
-				try {			
-					DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+				//Writes received message into the file
+				if(index == -1){			
 					try {
-						socket.send(ack);
-					} catch (IOException IOE){
-						IOE.printStackTrace();
+						fos.write(data);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+					//Creates and sends back an acknowledgment 
+					byte[] b = {0, 4, 0, 0};	
+					try {			
+						DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+						try {
+							socket.send(ack);
+						} catch (IOException IOE){
+							IOE.printStackTrace();
+							System.exit(1);
+						}
+					} catch (UnknownHostException e){
+						e.printStackTrace();
 						System.exit(1);
 					}
-				} catch (UnknownHostException e){
-					e.printStackTrace();
-					System.exit(1);
 				}
-			}
-			//Writes last bit of the received data
-			else{		
-	  			try {
-	 				fos.write(data, 0, index);
-	 			} catch (IOException e) {
-	 				e.printStackTrace();
-	 			}
-	 			try {
-	 				fos.close();
-	  			} catch (IOException e) {
-	  				e.printStackTrace();
-	  			}
-			}
-		}
+				//Writes last bit of the received data
+				else{		
+		  			try {
+		 				fos.write(data, 0, index);
+		 			} catch (IOException e) {
+		 				e.printStackTrace();
+		 			}
+		 			try {
+		 				fos.close();
+		  			} catch (IOException e) {
+		  				e.printStackTrace();
+		  			}
+				}
+			}//END if(!duplicate)
+		}//END while
 	}
 
 	/*
