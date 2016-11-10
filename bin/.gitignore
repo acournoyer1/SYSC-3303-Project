@@ -7,3 +7,10 @@
 /Server$ReadThread.class
 /Server$WriteThread.class
 /Server.class
+/IntermediateHost$HostSetup.class
+/IntermediateHost$Error.class
+/IntermediateHost$ErrorType.class
+/IntermediateHost$PacketType.class
+/IntermediateHost$ErrorPane.class
+/IntermediateHost$HostSetup$1.class
+/IntermediateHost$HostSetup$2.class
