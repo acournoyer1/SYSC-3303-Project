@@ -493,9 +493,9 @@ public class Client
 					else verbose = false;
 					if(testRadio.isSelected()) portNumber = HOST_PORT;
 					else portNumber = SERVER_PORT;
+					dispose();
 					if(readRadio.isSelected()) sendReadReceive(filename);
 					else sendWriteReceive(filename);
-					dispose();
 				}
 			});
 			cancelButton.addActionListener(new ActionListener()
