@@ -13,12 +13,11 @@ import javax.swing.border.EmptyBorder;
  * Team 11  
  * V1.16
  */
-public class IntermediateHost extends Thread {
+public class IntermediateHost {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
 	private boolean verbose;
 	private Error error;
-	public boolean hasFinished = false; //Set up boolean
 	
 	//Well known ports for intermediate and server
 	private static final int PORT_NUMBER = 23;
@@ -64,11 +63,6 @@ public class IntermediateHost extends Thread {
 		}
 	}
 	
-	@Override
-	public void run()
-	{
-		this.sendReceive();
-	}
 	
 	/*
 	*    Creates a host instance and runs it
@@ -77,27 +71,11 @@ public class IntermediateHost extends Thread {
     {
     	IntermediateHost host = new IntermediateHost();
     	host.setUp();
-    	while(!host.setUpFinished())
-    	{
-    		System.out.print("");
-    	}
-    	System.out.print("\n");
-    	host.start();
     }
 	
 	public void setUp()
 	{
-		new HostSetup();
-	}
-	
-	public boolean setUpFinished()
-	{
-		return hasFinished;
-	}
-	
-	public void setError(Error e)
-	{
-		this.error = e;
+		new HostSetup(this);
 	}
 	
 	/*
@@ -253,17 +231,20 @@ public class IntermediateHost extends Thread {
 	@SuppressWarnings("serial")
 	private class HostSetup extends JDialog
 	{
-		private ErrorPane error;
+		private ErrorPane errorPane;
 		private JRadioButton verboseRadio;
 		private JButton okButton;
 		private JButton cancelButton;
 		
-		public HostSetup()
+		private IntermediateHost h;
+		
+		public HostSetup(IntermediateHost h)
 		{
-			error = new ErrorPane();
-			verboseRadio = new JRadioButton("Verbose", true);
-			okButton = new JButton("OK");
-			cancelButton = new JButton("Cancel");
+			this.h = h;
+			this.errorPane = new ErrorPane();
+			this.verboseRadio = new JRadioButton("Verbose", true);
+			this.okButton = new JButton("OK");
+			this.cancelButton = new JButton("Cancel");
 			
 			JRadioButton quietRadio = new JRadioButton("Quiet");
 			ButtonGroup group = new ButtonGroup();
@@ -279,31 +260,30 @@ public class IntermediateHost extends Thread {
 			buttons.add(cancelButton);
 			
 			this.add(p, BorderLayout.NORTH);
-			this.add(error, BorderLayout.CENTER);
+			this.add(errorPane, BorderLayout.CENTER);
 			this.add(buttons, BorderLayout.SOUTH);
-			this.setSize(300,140);
 			this.setResizable(false);
-			error.setBorder(new EmptyBorder(this.getInsets()));
+			errorPane.setBorder(new EmptyBorder(this.getInsets()));
 			setUpListeners();
 			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 			this.setLocationRelativeTo(null);
+			this.setTitle("Error Generator Setup");
+			this.pack();
 			this.setVisible(true);
-			error.fixField();
 		}
 		
-		public void setUpListeners()
+		private void setUpListeners()
 		{
 			okButton.addActionListener(new ActionListener()
 			{
 				@Override
 				public void actionPerformed(ActionEvent e) 
 				{
-					setError(error.getError());
+					error = errorPane.getError();
 					if(verboseRadio.isSelected()) verbose = true;
 					else verbose = false;
-					hasFinished = true;
 					dispose();
-					
+					h.sendReceive();
 				}
 			});
 			cancelButton.addActionListener(new ActionListener()
@@ -313,6 +293,7 @@ public class IntermediateHost extends Thread {
 				{
 					System.out.println("Error Generator creation cancelled.\n");
 					dispose();
+					System.exit(0);
 				}
 			});
 		}
@@ -329,22 +310,18 @@ public class IntermediateHost extends Thread {
 		{
 			errorType = new JComboBox<ErrorType>(ErrorType.values());
 			packetType = new JComboBox<PacketType>(PacketType.values());
-			blockField = new JTextField("                   ");
+			blockField = new JTextField("1");
 			
 			this.add(new JLabel("Error: "));
 			this.add(errorType);
 			this.add(packetType);
 			this.add(blockField);
+			blockField.setColumns(2);
 		}
 		
 		public Error getError()
 		{
 			return new Error((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()));
-		}
-		
-		public void fixField()
-		{
-			blockField.setText("1");
 		}
 	}
 	
