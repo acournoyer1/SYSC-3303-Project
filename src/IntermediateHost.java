@@ -75,7 +75,7 @@ public class IntermediateHost {
 	
 	public void setUp()
 	{
-		new HostSetup(this);
+		new HostSetup();
 	}
 	
 	/*
@@ -158,7 +158,7 @@ public class IntermediateHost {
 						e.printStackTrace();
 					}
 					try {
-						packet = new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(), SERVER_PORT_NUMBER);
+						packet = new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(), serverPort);
 					} catch (UnknownHostException e) {
 						e.printStackTrace();
 					}
@@ -236,11 +236,8 @@ public class IntermediateHost {
 		private JButton okButton;
 		private JButton cancelButton;
 		
-		private IntermediateHost h;
-		
-		public HostSetup(IntermediateHost h)
+		public HostSetup()
 		{
-			this.h = h;
 			this.errorPane = new ErrorPane();
 			this.verboseRadio = new JRadioButton("Verbose", true);
 			this.okButton = new JButton("OK");
@@ -283,7 +280,7 @@ public class IntermediateHost {
 					if(verboseRadio.isSelected()) verbose = true;
 					else verbose = false;
 					dispose();
-					h.sendReceive();
+					sendReceive();
 				}
 			});
 			cancelButton.addActionListener(new ActionListener()

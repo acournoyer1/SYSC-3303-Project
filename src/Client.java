@@ -1,4 +1,3 @@
-import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
@@ -369,7 +368,7 @@ public class Client
 	
 	public void setUp()
 	{
-		new ClientSetup(this);
+		new ClientSetup();
 	}
 
 	public enum ActionType
@@ -377,6 +376,7 @@ public class Client
 		READ, WRITE, INVALID
 	}
 	
+	@SuppressWarnings("serial")
 	private class ClientSetup extends JDialog
 	{
 		private File file;
@@ -389,11 +389,8 @@ public class Client
 		private JButton okButton;
 		private JButton cancelButton;
 		
-		private Client c;
-		
-		public ClientSetup(Client c)
+		public ClientSetup()
 		{
-			this.c = c;
 			this.file = FileSystemView.getFileSystemView().getHomeDirectory();
 			this.directoryPath = new JTextField(file.getAbsolutePath());
 			this.directoryPath.setColumns(25);
