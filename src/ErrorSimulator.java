@@ -115,8 +115,8 @@ public class ErrorSimulator {
 				e.printStackTrace();
 				System.exit(1);
 			}
-			
-			System.out.println("Sending request to Server: " + Converter.convertMessage(request));
+			if(verbose)
+				System.out.println("Sending request to Server: " + Converter.convertMessage(request));
 			try{
 				socket.send(sendPacketServer);
 			} catch (IOException e) {
@@ -147,7 +147,7 @@ public class ErrorSimulator {
 					try {
 						//Check if the requested block matches the packet block
 						PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
-						if(error.getBlock() == packet.getData()[3] && error.getPacketType() == PacketType.DATA){
+						if(error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
 							switch(error.getError()){
 							case LOST:
 								System.out.println("Losing packet. . . " + pt);
@@ -193,7 +193,7 @@ public class ErrorSimulator {
 					try {
 						//Check if the requested block matches the packet block
 						PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
-						if(error.getBlock() == packet.getData()[3] && error.getPacketType() == PacketType.DATA){
+						if(error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
 							switch(error.getError()){
 							case LOST:
 								System.out.println("Losing packet. . . " + pt);
@@ -233,14 +233,16 @@ public class ErrorSimulator {
 					byte[] ack = new byte[4];
 					DatagramPacket packet = new DatagramPacket(ack, ack.length);
 					try {
-						System.out.println("Receiving ACK packet");
+						if(verbose)
+							System.out.println("Receiving ACK packet");
 						socket.receive(packet);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 					serverPort = packet.getPort();
 					try {
-						System.out.println("Cloning ack");
+						if(verbose)
+							System.out.println("Cloning ack");
 						packet = new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(), clientPort);
 					} catch (UnknownHostException e) {
 						e.printStackTrace();
@@ -273,7 +275,8 @@ public class ErrorSimulator {
 							}
 						}
 						else{
-							System.out.println("Sending ACK to client");
+							if(verbose)
+								System.out.println("Sending ACK to client");
 							socket.send(packet);
 						}
 					} catch (IOException e1) {
@@ -283,19 +286,22 @@ public class ErrorSimulator {
 					byte[] data = new byte[516];
 					packet = new DatagramPacket(data, data.length);
 					try {
-						System.out.println("Receiving Data from client");
+						if(verbose)
+							System.out.println("Receiving Data from client");
 						socket.receive(packet);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 					try {
-						System.out.println("Cloning data packet");
+						if(verbose)
+							System.out.println("Cloning data packet");
 						packet = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), serverPort);
 					} catch (UnknownHostException e) {
 						e.printStackTrace();
 					}
 					try {
-						System.out.println("Sending data packet to server:" + serverPort);
+						if(verbose)
+							System.out.println("Sending data packet to server:" + serverPort);
 						PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
 						if(error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
 							switch(error.getError()){
@@ -322,7 +328,8 @@ public class ErrorSimulator {
 							}
 						}
 						else{
-							System.out.println("Sending ACK to client");
+							if(verbose)
+								System.out.println("Sending ACK to client");
 							socket.send(packet);
 						}
 					} catch (IOException e) {
