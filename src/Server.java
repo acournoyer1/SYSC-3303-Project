@@ -1,3 +1,6 @@
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
@@ -7,7 +10,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
 
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.filechooser.FileSystemView;
 
 
 /**
@@ -16,7 +29,7 @@ import javax.swing.JFileChooser;
  * Team 11  
  * V1.16
  */
-public class Server extends Thread {
+public class Server {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
 	private File directory;
@@ -78,41 +91,6 @@ public class Server extends Thread {
 		{
 			return null;
 		}
-	}
-
-	@Override
-	public void run()
-	{
-		directory = getDirectory();
-		if(directory == null)
-		{
-			System.out.println("Creation of server cancelled.");
-			return;
-		}
-		Scanner s = new Scanner(System.in);
-		boolean verboseCheck = false;
-		while(!verboseCheck)
-		{
-			System.out.println("For verbose mode, enter v or verbose.");
-			System.out.println("For quiet mode, enter q or quiet.");
-			String verbose = s.nextLine();
-			if(verbose.equals("v") || verbose.equals("verbose"))
-			{
-				this.verbose = true;
-				verboseCheck = true;
-			}
-			else if (verbose.equals("q") || verbose.equals("quiet"))
-			{
-				this.verbose = false;
-				verboseCheck = true;
-			}
-			else
-			{
-				System.out.println("Please enter a valid string for verbose/quiet mode.");
-			}
-		}
-		s.close();
-		this.sendReceive();
 	}
 
 	/*
@@ -310,56 +288,164 @@ public class Server extends Thread {
 				e2.printStackTrace();
 			}
 			byte[] receiveMsg = new byte[4];
-			byte i = 0;
-
 			int available = 0;
-			try {
-				available = is.available();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-
+			
+			//Error Verification Variables 
+			int dataBlockCounter = -1;
+			int ACKcounter=-1; 
+			int tempIncomingACK=0;
+			boolean ACKdelay = false; 
+			boolean ACKlost = false;
 			try {
 				is.read(data);
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			DatagramPacket msg = buildData(data, i++, hostPort);
+			DatagramPacket msg = buildData(data, ++dataBlockCounter, hostPort);
 			try {
 				socket.send(msg);
+				System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			try {
+				available=is.available();
+			} catch (IOException e2) {
+				e2.printStackTrace();
+			}
 			//Continually reads data from the file until no more data is available
 			while(available > 0) {
+				ACKdelay = false;
+				ACKlost = false;
 				receiveMsg = new byte[4];
 
 				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 				try {
+					socket.setSoTimeout(2000);
 					socket.receive(receivePacket);
-				} catch (IOException e) {
-					e.printStackTrace();
+				} catch (SocketTimeoutException ste){
+					System.out.println("Ack is delayed for block number "+(dataBlockCounter));
+					ACKdelay = true;
+				} catch (IOException e) { e.printStackTrace();}
+				if (ACKdelay){
+					try {
+						socket.setSoTimeout(4000);
+						socket.receive(receivePacket);
+					} catch (SocketTimeoutException ste){
+						System.out.println("Ack is considdered lost.. Resending packet");
+						ACKdelay = false;
+						ACKlost = true;
+					} catch (IOException e) {e.printStackTrace();}
 				}
-
-				System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
-				
-				try {
-					is.read(data);
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				msg = buildData(data, i++, hostPort);
-				try {
-					socket.send(msg);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				try {
-					available = is.available();
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
+				if (ACKlost){//re-send packet
+					try{ 
+						socket.send(msg);
+						ACKlost=false;
+					} catch(IOException e){	e.printStackTrace();}
+				} else {
+					System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
+					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
+						System.out.println("Strange error.. exiting");
+						System.exit(1);
+					}
+					//parse two bytes into int.
+					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+					
+					//duplicate/delayed ACK packet restart loop:
+					if (tempIncomingACK <= ACKcounter){
+						//msg should contain previous DatagramPacket to send
+						System.out.println("Received old ACK statent, delay and/or duplication Error detected\nResending Packet");
+						try{ 
+							socket.send(msg);
+						} catch(IOException e){
+							e.printStackTrace();
+						}
+					} //expected result ACK corresponds to last block sent
+					else if(tempIncomingACK == dataBlockCounter){
+						ACKcounter = tempIncomingACK;
+						data = new byte[512];
+						try {
+							is.read(data);
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+						msg = buildData(data, ++dataBlockCounter, hostPort);
+						try {
+							System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
+							socket.send(msg);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						try {
+							available = is.available();
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+						
+						System.out.println("Bytes left in file"+available);
+					}//default case for circumstance where tempIncomingACK > ACKcounter which should never be possible.
+					else{
+						System.out.println("Unexpected Error Occurred, ACK for future packet Recieved");
+						try{ 
+							socket.send(msg);
+						} catch(IOException e){
+							e.printStackTrace();
+						}
+					}
+				}		
 			}//END Loop
+			//Receive Final ACK to make sure that the thing sent:
+			while (ACKcounter < dataBlockCounter){
+				System.out.println("entered seccond loop because ACKcounter is "+ACKcounter + " while block number is: "+dataBlockCounter);
+				
+				ACKdelay=false; ACKlost=false;
+				
+				receiveMsg = new byte[4];
+				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+				try {
+					socket.setSoTimeout(2000);
+					socket.receive(receivePacket);
+				} catch (SocketTimeoutException ste){
+					System.out.println("Ack is delayed for block number "+(dataBlockCounter));
+					ACKdelay = true;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				if (ACKdelay){
+					try {
+						socket.setSoTimeout(4000);
+						socket.receive(receivePacket);
+					} catch (SocketTimeoutException ste){
+						System.out.println("Ack is considdered lost.. Resending packet");
+						ACKdelay = false;
+						ACKlost = true;
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				if (ACKlost){//re-send packet
+					try{ 
+						socket.send(msg);
+						ACKlost=false;
+					} catch(IOException e){
+						e.printStackTrace();
+					}
+				}else {
+					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
+						System.out.println("Strange error.. exiting");
+						System.exit(1);
+					}
+					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+					if(tempIncomingACK == dataBlockCounter) {
+						ACKcounter = tempIncomingACK;
+						System.out.println("ACK recieved ");
+						System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
+						break;
+					}else {
+						try{ socket.send(msg);} catch(IOException e){ e.printStackTrace();}
+					}
+				}
+			}//END loop 
 			try {
 				is.close();
 			} catch (IOException e) {
@@ -434,19 +520,20 @@ public class Server extends Thread {
 		 */
 		private synchronized void sendReceive()
 		{
+			//sends first ACK to confirm that the Client can continue the file transfer. 
 			byte[] b = {0, 4, 0, 0};
 			DatagramPacket ack = null;
 			try {
 				ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), hostPort);
-			} catch (UnknownHostException e2) {
-				e2.printStackTrace();
-			}
-
+			} catch (UnknownHostException e2) {	e2.printStackTrace();}
 			try {
 				socket.send(ack);
-			} catch (IOException e2) {
-				e2.printStackTrace();
-			}
+			} catch (IOException e2) { e2.printStackTrace();}
+			//Sets up Error Detection Variables
+			int blockNum=0;
+			int incomingBlockID=0;
+			boolean delayed = false; 
+			boolean lost = false; 
 			//Sets up fileOuputStream
 			int index = -1;
 			byte[] receiveMsg;
@@ -459,56 +546,127 @@ public class Server extends Thread {
 
 			//Continually write to the file
 			while(index == -1) {
+				
+				//resets the packet duplicate checker;
+				
 				//Receives data from intermediate host
 				receiveMsg = new byte[516];
 				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 				try {
+					socket.setSoTimeout(2000);
 					System.out.println("Waiting for data. . .");
 					socket.receive(receivePacket);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				//Copies the data into a new array
-				byte[] data = new byte[512];
-				for(int i = 0, j = 4; i < data.length; i++, j++)
-				{
-					data[i] = receiveMsg[j];
-				}
-
-				for(int i = 0; i < data.length; i++) {
-					if(data[i] == 0){
-						index = i;
-						i = data.length;
-					}
-				}
-				//Writes data to the file
-				if(index == -1){
+				}catch (SocketTimeoutException ste){
+					delayed=true; 
+					System.out.println("Data Delayed, waiting...");
+				} catch (IOException e) {e.printStackTrace();}
+				
+				if(delayed){
 					try {
-						fos.write(data);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-
-					//Creates and sends acknowledgement to the intermediate host
-					try {
+						socket.setSoTimeout(5000);
+						socket.receive(receivePacket);
+					} catch (SocketTimeoutException ste) {
+						lost = true;
+						delayed= false;
+						System.out.println("Packet declared LOST, Resending Packet");
+					} catch (IOException e) {e.printStackTrace();}
+				}
+				
+				if (lost){
+					try{
 						socket.send(ack);
-					}catch (IOException IOE){
-						IOE.printStackTrace();
-						System.exit(1);
-					}
-					//Writes the last bit of data to the file
-				} else{
-					try {
-						fos.write(data, 0, index);
-					} catch (IOException e) {
-	    					e.printStackTrace();
-	    				}
-					try {
-						fos.close();
-					} catch (IOException e) {
+						lost=false; 
+					} catch (IOException e){
 						e.printStackTrace();
 					}
-				}
+				} else { //run normally check for duplicates
+					incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
+					System.out.println("block id incoming:"+incomingBlockID+" and blockNUM: "+(blockNum+1));
+					if(incomingBlockID == blockNum+1){
+						blockNum=incomingBlockID;
+						System.out.println("recieved Block Num "+blockNum);
+						//Copies the data into a new array
+						byte[] data = new byte[512];
+						for(int i = 0, j = 4; i < data.length && j < receiveMsg.length; i++, j++)
+						{
+							data[i] = receiveMsg[j];
+						}
+						//TODO: combine for loops, why can't if statement follow statement in first for
+						for(int k = 0; k < data.length; k++) {
+							if(data[k] == 0){
+								index = k;
+								k = data.length;
+							}
+						}
+						//Creates and sends acknowledgement to the intermediate host
+						b[2]=(byte)((blockNum >> 8)& 0xFF);//moves all bits 8 to the right then masks all but the right most 8 bits, 
+						b[3]=(byte)(blockNum & 0xFF); // masks all but the right most 8 bits.
+						try {
+							ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), hostPort);
+						} catch (UnknownHostException e2) {
+							e2.printStackTrace();
+						}
+						try {
+							socket.send(ack);
+						}catch (IOException IOE){
+							IOE.printStackTrace();
+							System.exit(1);
+						}
+						
+						//Writes data to the file
+						if(index == -1){
+							try {
+								fos.write(data);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+
+							//Writes the last bit of data to the file
+						} else{
+							System.out.println("Entered final loop, index is not -1 anymore.");
+							try {
+								fos.write(data, 0, index);
+							} catch (IOException e) {
+			    					e.printStackTrace();
+			    				}
+							try {
+								fos.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+							//TODO: put into method helper to clean code. 
+							//checks to see if the Client has any messages or had any issues with final ACK.
+							boolean received=false; 
+							do{
+								received = true;
+								try {
+									socket.setSoTimeout(10000);
+									socket.receive(receivePacket);
+								}catch (SocketTimeoutException ste){
+									received = false;
+									System.out.println("Assumed that the Client Received the Final ACK after 10 secconds without a message");
+								} catch(IOException e){e.printStackTrace();}
+								if (received){
+									incomingBlockID = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+									if(incomingBlockID <= blockNum){
+										try{ socket.send(ack);} catch(IOException e) {e.printStackTrace();}
+										System.out.println("Resending ACK");
+									}
+								}
+							}while(received);
+						}//end of running properly, exits while. 	
+					}else if (incomingBlockID <= blockNum){
+						System.out.println("incoming block is a duplicate");
+						
+					} else {
+						System.out.println("Unexpected Error Occured, Recieved Future data Packet");
+						try {
+							socket.send(ack);
+						} catch(IOException e){
+							e.printStackTrace();
+						}
+					}
+				} 
 			}//END While
 		}
 		@Override
@@ -524,7 +682,103 @@ public class Server extends Thread {
 	 */
 	public static void main(String args[])
 	{
-		Thread server = new Server();
-		server.start();
+		Server server = new Server();
+		server.setUp();
+	}
+	
+	public void setUp()
+	{
+		new ServerSetup();
+	}
+	
+	@SuppressWarnings("serial")
+	private class ServerSetup extends JDialog
+	{
+		private File file;
+		private JRadioButton verboseRadio;
+		private JTextField directoryPath;
+		private JButton browseButton;
+		private JButton okButton;
+		private JButton cancelButton;
+		
+		public ServerSetup()
+		{
+			this.file = FileSystemView.getFileSystemView().getHomeDirectory();
+			this.directoryPath = new JTextField(file.getAbsolutePath());
+			this.directoryPath.setColumns(25);
+			this.browseButton = new JButton("Browse...");
+			this.okButton = new JButton("OK");
+			this.cancelButton = new JButton("Cancel");
+			
+			this.verboseRadio = new JRadioButton("Verbose", true);
+			JRadioButton quietRadio = new JRadioButton("Quiet");
+			
+			ButtonGroup g = new ButtonGroup();
+			g.add(verboseRadio);
+			g.add(quietRadio);
+			
+			JPanel directoryPanel = new JPanel();
+			directoryPanel.add(new JLabel("Client Directory: "));
+			directoryPanel.add(this.directoryPath);
+			directoryPanel.add(this.browseButton);
+			
+			JPanel outputPanel = new JPanel();
+			outputPanel.add(this.verboseRadio);
+			outputPanel.add(quietRadio);
+			
+			JPanel buttonPanel = new JPanel();
+			buttonPanel.add(this.okButton);
+			buttonPanel.add(this.cancelButton);
+
+			this.add(directoryPanel, BorderLayout.NORTH);
+			this.add(outputPanel, BorderLayout.CENTER);
+			this.add(buttonPanel, BorderLayout.SOUTH);
+			this.pack();
+			this.setUpListeners();
+			this.setLocationRelativeTo(null);
+			this.setTitle("Client Setup");
+			this.setVisible(true);
+			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+		}
+		
+		private void setUpListeners()
+		{
+			okButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					directory = file;
+					if(verboseRadio.isSelected()) verbose = true;
+					else verbose = false;
+					dispose();
+					sendReceive();
+				}
+			});
+			cancelButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					System.out.println("Server creation cancelled.\n");
+					dispose();
+					System.exit(0);
+				}
+			});
+			browseButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					File tempFile = getDirectory();
+					if(tempFile != null)
+					{
+						file = tempFile;
+						directoryPath.setText(tempFile.getAbsolutePath());
+					}
+				}
+			});
+		}
+		
 	}
 }
