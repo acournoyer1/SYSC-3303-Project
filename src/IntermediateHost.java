@@ -157,6 +157,8 @@ public class IntermediateHost extends Thread {
 						e.printStackTrace();
 					}
 					serverPort = packet.getPort();
+					System.out.println("Packet Received from server");
+					
 					try {
 						packet = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), clientPort);
 					} catch (UnknownHostException e) {
@@ -167,6 +169,7 @@ public class IntermediateHost extends Thread {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					System.out.println("Packet sent to client");
 					//Creates acknowledgement packet and sends it to the server
 					byte[] ack = new byte[4];
 					packet = new DatagramPacket(ack, ack.length);
@@ -175,16 +178,18 @@ public class IntermediateHost extends Thread {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					try {
-						packet = new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(), SERVER_PORT_NUMBER);
+					try {//TODO changed SERVER_PORT_NUMBER to serverPort because server wasnt receiving acks as acks but rather as new requests. 
+						packet = new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(), serverPort );
 					} catch (UnknownHostException e) {
 						e.printStackTrace();
 					}
+					System.out.println("ACK recieved from Client"); 
 					try {
 						socket.send(packet);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					System.out.println("ACK sent to Server"); 
 				}
 			}
 			//If request is a write
