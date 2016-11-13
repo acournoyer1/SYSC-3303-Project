@@ -82,7 +82,8 @@ Diagrams:
 Work Done:
 
 	->Dan
-
+	- Created all timing diagrams 
+	
 	->Ryan 	
 	- Error Simulator Algorithm
 	- Server shutdown
