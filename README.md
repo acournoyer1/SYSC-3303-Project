@@ -92,4 +92,7 @@ Work Done:
 	- Setup GUIs
 	- Some work on Error Simulator
 	
+	->Daman
+	- UML Diagrams
+	
 	->Brendan
