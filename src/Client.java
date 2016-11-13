@@ -271,8 +271,8 @@ public class Client extends Thread
 			 			//Checks to see if server had any issues with final ACK
 			 			boolean received=false; 
 						do{
+							received = true;
 							try {
-								received = true;
 								socket.setSoTimeout(10000);
 								socket.receive(receivePacket);
 							}catch (SocketTimeoutException ste){
@@ -284,9 +284,10 @@ public class Client extends Thread
 							
 							if (received){
 								tempIncomingBlockNum = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
-								System.out.println("Another ACK recieved from Server, Addressing issue, ACK#: "+tempIncomingBlockNum);
-								if(tempIncomingBlockNum >= blockNum){
+								System.out.println("Another dataPacket recieved from Server, Addressing issue, ACK#: "+tempIncomingBlockNum);
+								if(tempIncomingBlockNum <= blockNum){
 									try{ socket.send(message);} catch(IOException e) {e.printStackTrace();}
+									System.out.println("Resending ACK");
 								}
 							}
 						}while(received);
@@ -295,12 +296,7 @@ public class Client extends Thread
 				//return to top of loop. and wait for server response unless index has been set and the file is done transferring. 
 				}else if(tempIncomingBlockNum <= blockNum){
 					//is a duplicate restart loop
-					System.out.println("Incoming Data block is a duplicate, resending ACK");
-					try{
-						socket.send(message);
-					} catch (IOException e){
-						e.printStackTrace();
-					}
+					System.out.println("Incoming Data block is a duplicate");
 				//incomingBlockNum Higher than blockNum should never happen, print error and resend ack.	
 				}else{
 					System.out.println("Unexpected Error Occured, Recieved Future Data Packet before ACK sent for present\n...Restarting Loop");
