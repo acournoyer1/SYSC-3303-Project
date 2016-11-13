@@ -667,8 +667,8 @@ public class Server extends Thread {
 							//checks to see if the Client has any messages or had any issues with final ACK.
 							boolean received=false; 
 							do{
+								received = true;
 								try {
-									received = true;
 									socket.setSoTimeout(10000);
 									socket.receive(receivePacket);
 								}catch (SocketTimeoutException ste){
@@ -677,19 +677,16 @@ public class Server extends Thread {
 								} catch(IOException e){e.printStackTrace();}
 								if (received){
 									incomingBlockID = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
-									if(incomingBlockID >= blockNum){
+									if(incomingBlockID <= blockNum){
 										try{ socket.send(ack);} catch(IOException e) {e.printStackTrace();}
+										System.out.println("Resending ACK");
 									}
 								}
 							}while(received);
 						}//end of running properly, exits while. 	
 					}else if (incomingBlockID <= blockNum){
-						System.out.println("incoming block is a duplicate, resending previous ACK");
-						try{
-							socket.send(ack);
-						} catch (IOException e){
-							e.printStackTrace();
-						}
+						System.out.println("incoming block is a duplicate");
+						
 					} else {
 						System.out.println("Unexpected Error Occured, Recieved Future data Packet");
 						try {
