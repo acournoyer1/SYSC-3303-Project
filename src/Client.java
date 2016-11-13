@@ -162,10 +162,7 @@ public class Client extends Thread
 			} catch (SocketTimeoutException ste){
 				System.out.println("Socket timeout file delayed or lost");
 				delayed = true;
-			}catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
+			}catch (IOException e) {e.printStackTrace();System.exit(1);}
 			if (delayed){
 				try {
 					socket.setSoTimeout(4000);  //set timeout 
@@ -174,20 +171,15 @@ public class Client extends Thread
 					System.out.println("Socket timeout file declared lost\nAsking to be sent again.");
 					lost = true;
 					delayed = false;///if delayed keep that info till the end of the loop
-				}catch (IOException e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
-				
+				}catch (IOException e) { e.printStackTrace();}
 			}
-			
 			//Start of Run after packet Received. 
 			if (lost){
-				System.out.println("Lost Packet resending Request or ack");
+				System.out.println("Lost Packet resending if message was ack");
 				lost=false;
 				try{
 					//re-send ACK or Request. 
-					socket.send(message);
+					if(message.getData()[1]!=1) socket.send(message);
 				} catch(IOException e){
 					e.printStackTrace();
 				}
