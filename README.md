@@ -1,5 +1,7 @@
 # SYSC-3303-Project
 
+Iteration 3
+
 Setup instructions: 
 	
 	
@@ -81,13 +83,10 @@ Work Done:
 	->Dan
 
 	->Ryan 	
-	- Built error checking algorithm
-	- Debugging and fixing Iteration 1 errors
-	- Test cases
-		
+	- Error Simulator Algorithm
+	- Server shutdown
+	- Verbose implementation
+	
 	->Alex
 	
 	->Brendan
-	- Timing Diagrams
-	->Daman
-	-Help debug client and server code and create readme
