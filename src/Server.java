@@ -350,9 +350,7 @@ public class Server extends Thread {
 				} catch (SocketTimeoutException ste){
 					System.out.println("Ack is delayed for block number "+(dataBlockCounter));
 					ACKdelay = true;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				} catch (IOException e) { e.printStackTrace();}
 				if (ACKdelay){
 					try {
 						socket.setSoTimeout(4000);
@@ -361,24 +359,19 @@ public class Server extends Thread {
 						System.out.println("Ack is considdered lost.. Resending packet");
 						ACKdelay = false;
 						ACKlost = true;
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+					} catch (IOException e) {e.printStackTrace();}
 				}
 				if (ACKlost){//re-send packet
 					try{ 
 						socket.send(msg);
 						ACKlost=false;
-					} catch(IOException e){
-						e.printStackTrace();
-					}
+					} catch(IOException e){	e.printStackTrace();}
 				} else {
 					System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
-					//Check for Problems with the ACK 
-					// -- ACK is already been received
-					// -- ACK is lower than dataBlockCounter-1; ACK should be ignored; 
-					// -- ACK is higher or equal to dataBlockCounter; shouldn't happen
-					
+					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
+						System.out.println("Strange error.. exiting");
+						System.exit(1);
+					}
 					//parse two bytes into int.
 					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
 					
@@ -462,6 +455,10 @@ public class Server extends Thread {
 						e.printStackTrace();
 					}
 				}else {
+					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
+						System.out.println("Strange error.. exiting");
+						System.exit(1);
+					}
 					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
 					if(tempIncomingACK == dataBlockCounter) {
 						ACKcounter = tempIncomingACK;
@@ -590,10 +587,8 @@ public class Server extends Thread {
 				
 				if(delayed){
 					try {
-						socket.setSoTimeout(4000);
-						
+						socket.setSoTimeout(5000);
 						socket.receive(receivePacket);
-						
 					} catch (SocketTimeoutException ste) {
 						lost = true;
 						delayed= false;
