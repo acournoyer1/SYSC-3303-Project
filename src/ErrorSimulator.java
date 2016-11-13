@@ -177,7 +177,7 @@ public class ErrorSimulator {
 				try {
 					socket.receive(packet);
 				} catch (IOException e) {
-					e.printStackTrace();
+					e.printStackTrace(); 
 				}
 				int currentDest = packet.getPort() == serverPort ? clientPort : serverPort;
 				try {
