@@ -165,7 +165,7 @@ public class Client extends Thread
 			}catch (IOException e) {e.printStackTrace();System.exit(1);}
 			if (delayed){
 				try {
-					socket.setSoTimeout(4000);  //set timeout 
+					socket.setSoTimeout(5000);  //set timeout 
 					socket.receive(receivePacket);	
 				} catch (SocketTimeoutException ste){
 					System.out.println("Socket timeout file declared lost\nAsking to be sent again.");
@@ -300,11 +300,6 @@ public class Client extends Thread
 				//incomingBlockNum Higher than blockNum should never happen, print error and resend ack.	
 				}else{
 					System.out.println("Unexpected Error Occured, Recieved Future Data Packet before ACK sent for present\n...Restarting Loop");
-					try{
-						socket.send(message);
-					} catch (IOException e){
-						e.printStackTrace();
-					}
 				} 	
 			}
 		}//END while
