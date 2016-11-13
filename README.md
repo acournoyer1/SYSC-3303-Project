@@ -82,7 +82,8 @@ Diagrams:
 Work Done:
 
 	->Dan
-
+	- Created all timing diagrams
+	
 	->Ryan 	
 	- Error Simulator Algorithm
 	- Server shutdown
@@ -91,8 +92,5 @@ Work Done:
 	->Alex
 	- Setup GUIs
 	- Some work on Error Simulator
-	
-	->Daman
-	- UML Diagrams
 	
 	->Brendan
