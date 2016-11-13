@@ -1,3 +1,6 @@
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
@@ -5,8 +8,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.filechooser.FileSystemView;
 
 
 /**
@@ -15,10 +30,12 @@ import javax.swing.JFileChooser;
  * Team 11  
  * V1.16
  */
-public class Server extends Thread {
+public class Server {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
 	private File directory;
+	private boolean verbose;
+	private boolean shutdown = false;
 
 	//Well-known server port number
 	private static final int PORT_NUMBER = 69;
@@ -48,14 +65,68 @@ public class Server extends Thread {
 			System.out.println("Server waiting...");
 			byte[] msg = new byte[100];
 			DatagramPacket receivedPacket = new DatagramPacket(msg, msg.length);
-			try {
-				receiveSocket.receive(receivedPacket);
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
+			while(!shutdown){
+				try {
+					receiveSocket.setSoTimeout(1000);
+					receiveSocket.receive(receivedPacket);
+					break;
+				} catch (IOException e) {
+					if(shutdown){
+						System.out.println("Shutting Down. . . " + shutdown);
+						return;
+					}
+				}
 			}
 			System.out.println("Request received from Host: " + Converter.convertMessage(msg));
-			
+			addThread(new ControlThread(receivedPacket));
+		}
+	}
+
+	/*
+	 * Enables the user to select which directory will act as the server's file system
+	 */
+	private File getDirectory()
+	{
+		JFileChooser directoryFinder = new JFileChooser();
+		directoryFinder.setDialogTitle("Server Directory");
+		directoryFinder.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		directoryFinder.setAcceptAllFileFilterUsed(false);
+		if (directoryFinder.showOpenDialog(directoryFinder) == JFileChooser.APPROVE_OPTION) { 
+			return directoryFinder.getSelectedFile();
+		}
+		else
+		{
+			return null;
+		}
+	}
+
+	/*
+	 *   Adds a new thread
+	 */
+	private void addThread(Thread t)
+	{
+		threads.add(t);
+		t.start();
+	}
+	
+	private void removeThread(Thread t)
+	{
+		threads.remove(t);
+	}
+	
+	private class ControlThread extends Thread
+	{
+		private DatagramPacket packet;
+		
+		public ControlThread(DatagramPacket packet)
+		{
+			this.packet = packet;
+		}
+		
+		@Override
+		public void run()
+		{
+			byte[] msg = packet.getData();
 			//Checks if request is valid (read or write)
 			if(!(msg[0] == 0 && (msg[1] == 1 || msg[1] == 2)))
 			{
@@ -113,28 +184,29 @@ public class Server extends Thread {
 			//Turns filename that is a byte array into a string
 			String filename = new String(b);
 			//Build "file" object from the specified filepath
-			File f = new File(this.directory + "\\" + filename);
-			Path path = Paths.get(this.directory + "\\" + filename);
+			File f = new File(directory + "\\" + filename);
+			Path path = Paths.get(directory + "\\" + filename);
+			
+			//If Else determine Read request or Write request
 			//Creates new read thread with filename
 			if(msg[1] == 1)
 			{
 				//Check if file exists
-				if(!Files.exists(path))
+				if(!f.exists())
 				{
 					System.out.println("Failed to read: 0501 - File not found. " + filename);
 					System.out.println("Sending error packet . . .");
-					createSendError(new Byte("1"), receivedPacket, receiveSocket);
+					createSendError(new Byte("1"), packet, receiveSocket);
 				}
 				//Check if the file can be read
 				else if(!Files.isReadable(path)){
 					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
-					createSendError(new Byte("2"), receivedPacket, receiveSocket);
+					createSendError(new Byte("2"), packet, receiveSocket);
 				}
 				//No errors, send valid response
 				else{
 					System.out.println("The request is a valid read request.");
-					System.out.println(filename);
-					addThread(new ReadThread(receivedPacket.getPort(), filename));
+					addThread(new ReadThread(packet.getPort(), filename));
 				}
 			}
 			//Creates new write thread with filename
@@ -144,82 +216,44 @@ public class Server extends Thread {
 				 if(Files.exists(path)){
 					System.out.println("Failed to write: 0506 - File already exists " + filename);
 					System.out.println("Sending error packet . . .");
-					createSendError(new Byte("6"), receivedPacket, receiveSocket);
+					createSendError(new Byte("6"), packet, receiveSocket);
 				}
 				//Check if can write
 				 else if(Files.isWritable(path)){
 					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
 					System.out.println("Sending error packet . . .");
-					createSendError(new Byte("2"), receivedPacket, receiveSocket);
+					createSendError(new Byte("2"), packet, receiveSocket);
 				}
 				//Check if there is enough space on the server
-				else if(f.getParentFile().getFreeSpace() < receivedPacket.getData().length){
+				else if(f.getParentFile().getFreeSpace() < packet.getData().length){
 					System.out.println("Failed to write: 0503 - Not enough disk space. " + filename);
 					System.out.println("Sending error packet . . .");
-					createSendError(new Byte("3"), receivedPacket, receiveSocket);
+					createSendError(new Byte("3"), packet, receiveSocket);
 				}
 
 				else{
 					System.out.println("The request is a valid write request.");
-					System.out.println(filename);
-					addThread(new WriteThread(receivedPacket.getPort(), filename));
+					addThread(new WriteThread(packet.getPort(), filename));
 				}
 			}
+			removeThread(this);
 		}
-	}
 
-	private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket){
-		byte[] b = {0, 5, 0, errorNum};
-		try {			
-			DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
-			try {
-				socket.send(ack);
-			}catch (IOException IOE){
-				IOE.printStackTrace();
+		private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket){
+			byte[] b = {0, 5, 0, errorNum};
+			try {			
+				DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+				try {
+					socket.send(ack);
+				}catch (IOException IOE){
+					IOE.printStackTrace();
+					System.exit(1);
+				}
+			} catch (UnknownHostException e){
+				e.printStackTrace();
 				System.exit(1);
 			}
-		} catch (UnknownHostException e){
-			e.printStackTrace();
-			System.exit(1);
 		}
-	}
-
-
-	/*
-	 * Enables the user to select which directory will act as the server's file system
-	 */
-	private File getDirectory()
-	{
-		JFileChooser directoryFinder = new JFileChooser();
-		directoryFinder.setDialogTitle("Server Directory");
-		directoryFinder.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		directoryFinder.setAcceptAllFileFilterUsed(false);
-		if (directoryFinder.showOpenDialog(directoryFinder) == JFileChooser.APPROVE_OPTION) { 
-			return directoryFinder.getSelectedFile();
-		}
-		else
-		{
-			return null;
-		}
-	}
-
-	@Override
-	public void run()
-	{
-		while(directory == null)
-		{
-			directory = getDirectory();
-		}
-		this.sendReceive();
-	}
-
-	/*
-	 *   Adds a new thread
-	 */
-	private void addThread(Thread t)
-	{
-		threads.add(t);
-		t.start();
 	}
 
 	/*
@@ -305,6 +339,11 @@ public class Server extends Thread {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+				try {
+					available = is.available();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 			}//END Loop
 			try {
 				is.close();
@@ -343,6 +382,7 @@ public class Server extends Thread {
 		public void run()
 		{
 			sendReceive();
+			removeThread(this);
 		}
 	}
 
@@ -367,6 +407,11 @@ public class Server extends Thread {
 			} catch (SocketException e) {
 				e.printStackTrace();
 			}
+		}
+		
+		public String getFilename()
+		{
+			return filename;
 		}
 
 		/*
@@ -455,6 +500,7 @@ public class Server extends Thread {
 		public void run()
 		{
 			sendReceive();
+			removeThread(this);
 		}
 	}
 
@@ -463,7 +509,125 @@ public class Server extends Thread {
 	 */
 	public static void main(String args[])
 	{
-		Thread server = new Server();
-		server.start();
+		Server server = new Server();
+		server.setUp(server);
+	}
+	
+	public void setUp(Server server)
+	{
+		new ServerSetup(server);
+	}
+	
+	private class ShutDown{
+		private Server server;
+		private JFrame frame;
+		
+		public ShutDown(Server serv){
+			this.server = serv;
+			frame = new JFrame();
+			JButton stop = new JButton("Stop");
+			stop.addActionListener(new ActionListener(){
+				public void actionPerformed(ActionEvent e){
+					server.shutdown = true;
+					frame.dispose();
+				}
+			});
+			frame.add(stop);
+			frame.setSize(100, 100);
+			frame.setVisible(true);
+		}
+	}
+	
+	@SuppressWarnings("serial")
+	private class ServerSetup extends JDialog
+	{
+		private File file;
+		private JRadioButton verboseRadio;
+		private JTextField directoryPath;
+		private JButton browseButton;
+		private JButton okButton;
+		private JButton cancelButton;
+		private Server server;
+		
+		public ServerSetup(Server server)
+		{
+			this.server = server;
+			this.file = FileSystemView.getFileSystemView().getHomeDirectory();
+			this.directoryPath = new JTextField(file.getAbsolutePath());
+			this.directoryPath.setColumns(25);
+			this.browseButton = new JButton("Browse...");
+			this.okButton = new JButton("OK");
+			this.cancelButton = new JButton("Cancel");
+			
+			this.verboseRadio = new JRadioButton("Verbose", true);
+			JRadioButton quietRadio = new JRadioButton("Quiet");
+			
+			ButtonGroup g = new ButtonGroup();
+			g.add(verboseRadio);
+			g.add(quietRadio);
+			
+			JPanel directoryPanel = new JPanel();
+			directoryPanel.add(new JLabel("Client Directory: "));
+			directoryPanel.add(this.directoryPath);
+			directoryPanel.add(this.browseButton);
+			
+			JPanel outputPanel = new JPanel();
+			outputPanel.add(this.verboseRadio);
+			outputPanel.add(quietRadio);
+			
+			JPanel buttonPanel = new JPanel();
+			buttonPanel.add(this.okButton);
+			buttonPanel.add(this.cancelButton);
+
+			this.add(directoryPanel, BorderLayout.NORTH);
+			this.add(outputPanel, BorderLayout.CENTER);
+			this.add(buttonPanel, BorderLayout.SOUTH);
+			this.pack();
+			this.setUpListeners();
+			this.setLocationRelativeTo(null);
+			this.setTitle("Client Setup");
+			this.setVisible(true);
+			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+		}
+		
+		private void setUpListeners()
+		{
+			okButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					directory = file;
+					verbose = verboseRadio.isSelected() ? true : false;
+					dispose();
+					new ShutDown(server);
+					sendReceive();
+				}
+			});
+			cancelButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					System.out.println("Server creation cancelled.\n");
+					dispose();
+					System.exit(0);
+				}
+			});
+			browseButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					File tempFile = getDirectory();
+					if(tempFile != null)
+					{
+						file = tempFile;
+						directoryPath.setText(tempFile.getAbsolutePath());
+					}
+				}
+			});
+		}
+		
 	}
 }
