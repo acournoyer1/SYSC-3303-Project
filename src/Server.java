@@ -456,12 +456,13 @@ public class Server {
 		/*
 		 *    Builds a DatagramPacket containing the data
 		 */
-		private synchronized DatagramPacket buildData(byte[] data, byte blockNumber, int portNumber)
+		private synchronized DatagramPacket buildData(byte[] data, int dataBlockCounter, int portNumber)
 		{
 			//Adds the code for data block(03) followed by block number
 			byte[] msg = new byte[516];
 			msg[1] = 3;
-			msg[3] = blockNumber;
+			msg[2] = (byte) ((byte)dataBlockCounter/256);
+			msg[3] = (byte) ((byte)dataBlockCounter - dataBlockCounter/256);
 
 			//Adds the data to the byte array
 			for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)
