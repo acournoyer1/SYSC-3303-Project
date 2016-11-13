@@ -250,16 +250,18 @@ public class ErrorSimulator {
 					try {
 						//TODO: Fix block number
 						PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
-						if(error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
+						if(!error.hasExecuted() && error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
 							switch(error.getError()){
 							case LOST:
 								System.out.println("Losing Packet . . . " + pt);
+								error.execute();
 								break;
 							case DUPLICATED:
 								try{
 									System.out.println("Duplicating Packet. . . " + pt);
 									socket.send(packet);
 									socket.send(packet);
+									error.execute();
 								}catch(SocketException e){}
 								break;
 							case DELAYED:
@@ -268,6 +270,7 @@ public class ErrorSimulator {
 									//Delay the packet by sleeping the thread before sending
 									Thread.sleep(2);
 									socket.send(packet);
+									error.execute();
 								} catch(InterruptedException ie){
 									ie.printStackTrace();
 								}
@@ -303,16 +306,18 @@ public class ErrorSimulator {
 						if(verbose)
 							System.out.println("Sending data packet to server:" + serverPort);
 						PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
-						if(error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
+						if(!error.hasExecuted() && error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
 							switch(error.getError()){
 							case LOST:
 								System.out.println("Losing Packet . . . " + pt);
+								error.execute();
 								break;
 							case DUPLICATED:
 								try{
 									System.out.println("Duplicating Packet. . . " + pt);
 									socket.send(packet);
 									socket.send(packet);
+									error.execute();
 								}catch(SocketException e){}
 								break;
 							case DELAYED:
@@ -321,6 +326,7 @@ public class ErrorSimulator {
 									//Delay the packet by sleeping the thread before sending
 									Thread.sleep(2);
 									socket.send(packet);
+									error.execute();
 									break;
 								} catch(InterruptedException ie){
 									ie.printStackTrace();
