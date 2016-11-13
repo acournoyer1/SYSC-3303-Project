@@ -544,7 +544,8 @@ public class Server extends Thread {
 		 *   Sends request to intermediate host then writes to the file  
 		 */
 		private synchronized void sendReceive()
-		{	//sends first ACK to confirm that the Client can continue the file transfer. 
+		{	
+			//sends first ACK to confirm that the Client can continue the file transfer. 
 			byte[] b = {0, 4, 0, 0};
 			DatagramPacket ack = null;
 			try {
