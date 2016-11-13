@@ -21,6 +21,8 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileSystemView;
 
 
@@ -510,25 +512,23 @@ public class Server {
 	public static void main(String args[])
 	{
 		Server server = new Server();
-		server.setUp(server);
+		server.setUp();
 	}
 	
-	public void setUp(Server server)
+	public void setUp()
 	{
-		new ServerSetup(server);
+		new ServerSetup();
 	}
 	
 	private class ShutDown{
-		private Server server;
 		private JFrame frame;
 		
-		public ShutDown(Server serv){
-			this.server = serv;
+		public ShutDown(){
 			frame = new JFrame();
 			JButton stop = new JButton("Stop");
 			stop.addActionListener(new ActionListener(){
 				public void actionPerformed(ActionEvent e){
-					server.shutdown = true;
+					shutdown = true;
 					frame.dispose();
 				}
 			});
@@ -547,11 +547,9 @@ public class Server {
 		private JButton browseButton;
 		private JButton okButton;
 		private JButton cancelButton;
-		private Server server;
 		
-		public ServerSetup(Server server)
+		public ServerSetup()
 		{
-			this.server = server;
 			this.file = FileSystemView.getFileSystemView().getHomeDirectory();
 			this.directoryPath = new JTextField(file.getAbsolutePath());
 			this.directoryPath.setColumns(25);
@@ -600,8 +598,14 @@ public class Server {
 					directory = file;
 					verbose = verboseRadio.isSelected() ? true : false;
 					dispose();
-					new ShutDown(server);
-					sendReceive();
+					new ShutDown();
+					SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>(){
+						public Void doInBackground(){
+							sendReceive();
+							return null;
+						}
+					};
+					worker.execute();
 				}
 			});
 			cancelButton.addActionListener(new ActionListener()
