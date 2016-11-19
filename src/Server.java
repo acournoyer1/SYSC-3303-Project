@@ -74,6 +74,64 @@ public class Server {
 			addThread(new ControlThread(receivedPacket));
 		}
 	}
+	
+	/**
+	 * Checks if the incoming packet is in the correct format and contains
+	 * valid information
+	 * 
+	 * @param packet that was received and will be processed
+	 * @return true if it is valid; false if it isn't valid
+	 */
+	public boolean checkIfValidPacket(byte[] packet) {
+		//Packet needs to starts with zero for all cases
+		if(packet[0] != new Byte("0")) return false;
+		//Checks it as a RRQ/WRQ packet
+		if(packet[1] == new Byte("1") || packet[1] == new Byte("2")) {
+			int numberOfZeroes = 0;
+			//Checks to make sure there are 2 zeroes after the read/write bytes
+			for (int i = 2; i <= packet.length-2; i++) {		
+				if (packet[i] == 0) {	
+					numberOfZeroes++;
+					//Makes sure filename and mode isn't missing
+					if (packet[i+1] == 0 || packet[i-1] == 0 || i == 2) return false;		
+				} 
+			}
+			//File should not have more or less than 2 zeroes (potential corruption)
+			if (numberOfZeroes == 2) return true;
+		} 
+		//Checks it as a DATA packet
+		else if (packet[1] == new Byte("3")) return true;
+		//Checks it as a ACK packet
+		else if ((packet[1] == new Byte("4")) && (packet.length == 4)) return true;
+		//Checks it as a ERROR packet
+		else if (packet[1] == new Byte("5")) {
+			String errorMessage;
+			String message1a = "Failed to read: 0501 - File not found.";
+			String message1b = "Failed to read: 0501 - File not found.";
+			String message2a = "Failed to read: 0502 - Access Violation.";
+			String message2b = "Failed to read: 0502 - Access Violation.";
+			String message3a = "Failed to read: 0503 - Disk full or allocation exceeded.";
+			String message3b = "Failed to read: 0503 - Disk full or allocation exceeded.";
+			//String message4a = "Failed to read: 0504 - Illegal TFTP operation.";
+			//String message4b = "Failed to read: 0504 - Illegal TFTP operation.";
+			String message5a = "Failed to read: 0505 - Unknown transfer ID.";
+			String message5b = "Failed to read: 0505 - Unknown transfer ID.";
+			byte[] error= new byte[96];
+			
+			if (packet[packet.length-1] != 0) return false;
+			for (int i = 0; packet[i] != 0; i++) {
+				error[i] = packet[i+4];
+			}
+			errorMessage = error.toString();
+			if ((packet[2] == 0) && (packet[3] == 1) && ((errorMessage == message1a) || (errorMessage == message1b))) return true;
+			else if ((packet[2] == 0) && (packet[3] == 2) && ((errorMessage == message2a) || (errorMessage == message2b))) return true;
+			else if ((packet[2] == 0) && (packet[3] == 3) && ((errorMessage == message3a) || (errorMessage == message3b))) return true;
+			//else if ((packet[2] == 0) && (packet[3] == 4) && ((errorMessage == message4a) || (errorMessage == message4b))) return true;
+			else if ((packet[2] == 0) && (packet[3] == 5) && ((errorMessage == message5a) || (errorMessage == message5b))) return true;
+		}
+		return false;
+	}
+
 
 	/*
 	 * Enables the user to select which directory will act as the server's file system
