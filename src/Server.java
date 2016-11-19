@@ -735,7 +735,7 @@ public class Server {
 			this.pack();
 			this.setUpListeners();
 			this.setLocationRelativeTo(null);
-			this.setTitle("Client Setup");
+			this.setTitle("Server Setup");
 			this.setVisible(true);
 			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		}
