@@ -1,11 +1,14 @@
 # SYSC-3303-Project
 
+Iteration 3
+
 Setup instructions: 
 	
 	
 	1: Run Server.java and choose a directory to read/write from.
 		-*NOTE* for testing purposes we point to the project folder as it has test files for us to read/write.
 		-The user is prompted to run it in either verbose or quiet mode
+		-The user is also asked if it should be run in test or normal mode
 		
 	2. Run IntermediateHost.java choose to run it in verbose or quiet mode
 		
@@ -79,15 +82,19 @@ Diagrams:
 Work Done:
 
 	->Dan
-
+	- Created all timing diagrams 
+	
 	->Ryan 	
-	- Built error checking algorithm
-	- Debugging and fixing Iteration 1 errors
-	- Test cases
-		
+	- Error Simulator Algorithm
+	- Server shutdown
+	- Verbose implementation
+	
 	->Alex
+	- Setup GUIs
+	- Some work on Error Simulator
+	
+	->Daman
+	- UML Diagrams
 	
 	->Brendan
-	- Timing Diagrams
-	->Daman
-	-Help debug client and server code and create readme
+	- Network Error Handling 

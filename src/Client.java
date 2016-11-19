@@ -1,11 +1,13 @@
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Scanner;
 
-import javax.swing.JFileChooser;
+import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 
 /*
  * Creates a instance of client which sends and receives files from/to server through the intermediate host
@@ -13,13 +15,21 @@ import javax.swing.JFileChooser;
  * Team 11  
  * V1.16
  */
-public class Client extends Thread
+public class Client
 {
-	private static final int PORT_NUMBER = 23;
+	private static final int SERVER_PORT = 69;
+	private static final int HOST_PORT = 23;
+	
+	private int portNumber = HOST_PORT;
 	private DatagramSocket socket;
 	private File directory;
 	private boolean verbose;
+<<<<<<< HEAD
 	//TODO: private int prevBlockNum;
+=======
+	private String filename;
+
+>>>>>>> refs/remotes/origin/master
 	/*
 	 * Constructor for objects of class Client
 	 */
@@ -73,7 +83,7 @@ public class Client extends Thread
 
 		//Creates the DatagramPacket from the byte array and sends it back
 		try {					
-			return new DatagramPacket(request, request.length, InetAddress.getLocalHost(), PORT_NUMBER);
+			return new DatagramPacket(request, request.length, InetAddress.getLocalHost(), portNumber);
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			return null;
@@ -84,14 +94,24 @@ public class Client extends Thread
 	/*
 	 *	Creates a DatagramPacket that contains the data requested
 	 */
+<<<<<<< HEAD
 	private synchronized DatagramPacket buildData(byte[] data, int blockNumber, int portNumber)
+=======
+	private synchronized DatagramPacket buildData(byte[] data, int dataBlockCounter, int portNumber)
+>>>>>>> refs/remotes/origin/master
 	{
 		//Adds "3" for data packet format followed by block number
 		byte[] msg = new byte[516];
 		msg[1] = 3;				
+<<<<<<< HEAD
 		msg[2] =(byte)((blockNumber >> 8) & 0xFF);
 		msg[3] =(byte)(blockNumber & 0xFF);
 		System.out.println("Making  DatagramPacket with send number "+msg[1]+", "+msg[2]+", "+msg[3] );
+=======
+		msg[2] = (byte) ((byte)dataBlockCounter/256);
+		msg[3] = (byte) ((byte)dataBlockCounter - dataBlockCounter/256);
+
+>>>>>>> refs/remotes/origin/master
 		//Goes through the data and adds it to the message
 		for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)	
 		{
@@ -513,7 +533,7 @@ public class Client extends Thread
 	 */
 	private File getDirectory()
 	{
-		JFileChooser directoryFinder = new JFileChooser();
+		JFileChooser directoryFinder = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
 		directoryFinder.setDialogTitle("Client Directory");
 		directoryFinder.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		directoryFinder.setAcceptAllFileFilterUsed(false);
@@ -526,6 +546,7 @@ public class Client extends Thread
 		}
 	}
 
+<<<<<<< HEAD
 	@Override 
 	public void run()
 	{
@@ -591,18 +612,171 @@ public class Client extends Thread
 		}
 		socket.close();
 	}
+=======
+>>>>>>> refs/remotes/origin/master
 
 	/*
 	 *    Creates a host instance and runs it
 	 */
 	public static void main(String args[])
 	{
-		Thread client = new Client();
-		client.start();
+		Client client = new Client();
+		client.setUp();
+	}
+	
+	public void setUp()
+	{
+		new ClientSetup();
 	}
 
 	public enum ActionType
 	{
 		READ, WRITE, INVALID
+	}
+	
+	@SuppressWarnings("serial")
+	private class ClientSetup extends JDialog
+	{
+		private File file;
+		private JRadioButton verboseRadio;
+		private JRadioButton testRadio;
+		private JRadioButton readRadio;
+		private JTextField directoryPath;
+		private JTextField fileField;
+		private JButton browseButton;
+		private JButton okButton;
+		private JButton cancelButton;
+		
+		public ClientSetup()
+		{
+			this.file = FileSystemView.getFileSystemView().getHomeDirectory();
+			this.directoryPath = new JTextField(file.getAbsolutePath());
+			this.directoryPath.setColumns(25);
+			this.fileField = new JTextField("");
+			this.fileField.setColumns(5);
+			this.browseButton = new JButton("Browse...");
+			this.okButton = new JButton("OK");
+			this.cancelButton = new JButton("Cancel");
+			
+			this.verboseRadio = new JRadioButton("Verbose", true);
+			this.testRadio = new JRadioButton("Test", true);
+			this.readRadio = new JRadioButton("Read", true);
+			JRadioButton quietRadio = new JRadioButton("Quiet");
+			JRadioButton normalRadio = new JRadioButton("Normal");
+			JRadioButton writeRadio = new JRadioButton("Write");
+			
+			ButtonGroup g1 = new ButtonGroup();
+			g1.add(verboseRadio);
+			g1.add(quietRadio);
+			ButtonGroup g2 = new ButtonGroup();
+			g2.add(testRadio);
+			g2.add(normalRadio);
+			ButtonGroup g3 = new ButtonGroup();
+			g3.add(readRadio);
+			g3.add(writeRadio);
+			
+			JPanel directoryPanel = new JPanel();
+			directoryPanel.add(new JLabel("Client Directory: "));
+			directoryPanel.add(this.directoryPath);
+			directoryPanel.add(this.browseButton);
+			
+			JPanel outputPanel = new JPanel();
+			outputPanel.add(this.verboseRadio);
+			outputPanel.add(quietRadio);
+			
+			JPanel modePanel = new JPanel();
+			modePanel.add(this.testRadio);
+			modePanel.add(normalRadio);
+			
+			JPanel transferPanel = new JPanel();
+			transferPanel.add(this.readRadio);
+			transferPanel.add(writeRadio);
+			
+			JPanel filePanel = new JPanel();
+			filePanel.add(new JLabel("Filename: "));
+			filePanel.add(this.fileField);
+			
+			JPanel buttonPanel = new JPanel();
+			buttonPanel.add(this.okButton);
+			buttonPanel.add(this.cancelButton);
+			
+			JSplitPane s1 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+			s1.setDividerSize(0);
+			s1.setBorder(BorderFactory.createEmptyBorder());
+			JSplitPane s2 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+			s2.setDividerSize(0);
+			s2.setBorder(BorderFactory.createEmptyBorder());
+			JSplitPane s3 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+			s3.setDividerSize(0);
+			s3.setBorder(BorderFactory.createEmptyBorder());
+			JSplitPane s4 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+			s4.setDividerSize(0);
+			s4.setBorder(BorderFactory.createEmptyBorder());
+			
+			s3.setTopComponent(transferPanel);
+			s3.setBottomComponent(filePanel);
+			s2.setTopComponent(s3);
+			s2.setBottomComponent(buttonPanel);
+			s4.setTopComponent(outputPanel);
+			s4.setBottomComponent(modePanel);
+			s1.setTopComponent(directoryPanel);
+			s1.setBottomComponent(s4);
+			
+			JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+			split.setDividerSize(0);
+			split.setTopComponent(s1);
+			split.setBottomComponent(s2);
+			this.add(split);
+			this.pack();
+			this.setUpListeners();
+			this.setLocationRelativeTo(null);
+			this.setTitle("Client Setup");
+			this.setVisible(true);
+			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+		}
+		
+		private void setUpListeners()
+		{
+			okButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					directory = file;
+					filename = fileField.getText();
+					if(verboseRadio.isSelected()) verbose = true;
+					else verbose = false;
+					if(testRadio.isSelected()) portNumber = HOST_PORT;
+					else portNumber = SERVER_PORT;
+					dispose();
+					if(readRadio.isSelected()) sendReadReceive(filename);
+					else sendWriteReceive(filename);
+				}
+			});
+			cancelButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					System.out.println("Client creation cancelled.\n");
+					dispose();
+					System.exit(0);
+				}
+			});
+			browseButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					File tempFile = getDirectory();
+					if(tempFile != null)
+					{
+						file = tempFile;
+						directoryPath.setText(tempFile.getAbsolutePath());
+					}
+				}
+			});
+		}
+		
 	}
 }

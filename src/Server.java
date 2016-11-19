@@ -1,3 +1,6 @@
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
@@ -7,7 +10,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
 
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.filechooser.FileSystemView;
 
 
 /**
@@ -16,7 +29,7 @@ import javax.swing.JFileChooser;
  * Team 11  
  * V1.16
  */
-public class Server extends Thread {
+public class Server {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
 	private File directory;
@@ -78,41 +91,6 @@ public class Server extends Thread {
 		{
 			return null;
 		}
-	}
-
-	@Override
-	public void run()
-	{
-		directory = getDirectory();
-		if(directory == null)
-		{
-			System.out.println("Creation of server cancelled.");
-			return;
-		}
-		Scanner s = new Scanner(System.in);
-		boolean verboseCheck = false;
-		while(!verboseCheck)
-		{
-			System.out.println("For verbose mode, enter v or verbose.");
-			System.out.println("For quiet mode, enter q or quiet.");
-			String verbose = s.nextLine();
-			if(verbose.equals("v") || verbose.equals("verbose"))
-			{
-				this.verbose = true;
-				verboseCheck = true;
-			}
-			else if (verbose.equals("q") || verbose.equals("quiet"))
-			{
-				this.verbose = false;
-				verboseCheck = true;
-			}
-			else
-			{
-				System.out.println("Please enter a valid string for verbose/quiet mode.");
-			}
-		}
-		s.close();
-		this.sendReceive();
 	}
 
 	/*
@@ -480,13 +458,22 @@ public class Server extends Thread {
 		/*
 		 *    Builds a DatagramPacket containing the data
 		 */
+<<<<<<< HEAD
 		private synchronized DatagramPacket buildData(byte[] data, int blockNumber, int portNumber)
+=======
+		private synchronized DatagramPacket buildData(byte[] data, int dataBlockCounter, int portNumber)
+>>>>>>> refs/remotes/origin/master
 		{
 			//Adds the code for data block(03) followed by block number
 			byte[] msg = new byte[516];
 			msg[1] = 3;
+<<<<<<< HEAD
 			msg[2] = (byte)((blockNumber >> 8) & 0xFF);
 			msg[3] = (byte)(blockNumber & 0xFF);
+=======
+			msg[2] = (byte) ((byte)dataBlockCounter/256);
+			msg[3] = (byte) ((byte)dataBlockCounter - dataBlockCounter/256);
+>>>>>>> refs/remotes/origin/master
 
 			//Adds the data to the byte array
 			for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)
@@ -544,7 +531,11 @@ public class Server extends Thread {
 		 *   Sends request to intermediate host then writes to the file  
 		 */
 		private synchronized void sendReceive()
+<<<<<<< HEAD
 		{	
+=======
+		{
+>>>>>>> refs/remotes/origin/master
 			//sends first ACK to confirm that the Client can continue the file transfer. 
 			byte[] b = {0, 4, 0, 0};
 			DatagramPacket ack = null;
@@ -706,8 +697,104 @@ public class Server extends Thread {
 	 */
 	public static void main(String args[])
 	{
-		Thread server = new Server();
-		server.start();
+		Server server = new Server();
+		server.setUp();
+	}
+	
+	public void setUp()
+	{
+		new ServerSetup();
+	}
+	
+	@SuppressWarnings("serial")
+	private class ServerSetup extends JDialog
+	{
+		private File file;
+		private JRadioButton verboseRadio;
+		private JTextField directoryPath;
+		private JButton browseButton;
+		private JButton okButton;
+		private JButton cancelButton;
+		
+		public ServerSetup()
+		{
+			this.file = FileSystemView.getFileSystemView().getHomeDirectory();
+			this.directoryPath = new JTextField(file.getAbsolutePath());
+			this.directoryPath.setColumns(25);
+			this.browseButton = new JButton("Browse...");
+			this.okButton = new JButton("OK");
+			this.cancelButton = new JButton("Cancel");
+			
+			this.verboseRadio = new JRadioButton("Verbose", true);
+			JRadioButton quietRadio = new JRadioButton("Quiet");
+			
+			ButtonGroup g = new ButtonGroup();
+			g.add(verboseRadio);
+			g.add(quietRadio);
+			
+			JPanel directoryPanel = new JPanel();
+			directoryPanel.add(new JLabel("Client Directory: "));
+			directoryPanel.add(this.directoryPath);
+			directoryPanel.add(this.browseButton);
+			
+			JPanel outputPanel = new JPanel();
+			outputPanel.add(this.verboseRadio);
+			outputPanel.add(quietRadio);
+			
+			JPanel buttonPanel = new JPanel();
+			buttonPanel.add(this.okButton);
+			buttonPanel.add(this.cancelButton);
+
+			this.add(directoryPanel, BorderLayout.NORTH);
+			this.add(outputPanel, BorderLayout.CENTER);
+			this.add(buttonPanel, BorderLayout.SOUTH);
+			this.pack();
+			this.setUpListeners();
+			this.setLocationRelativeTo(null);
+			this.setTitle("Client Setup");
+			this.setVisible(true);
+			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+		}
+		
+		private void setUpListeners()
+		{
+			okButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					directory = file;
+					if(verboseRadio.isSelected()) verbose = true;
+					else verbose = false;
+					dispose();
+					sendReceive();
+				}
+			});
+			cancelButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					System.out.println("Server creation cancelled.\n");
+					dispose();
+					System.exit(0);
+				}
+			});
+			browseButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					File tempFile = getDirectory();
+					if(tempFile != null)
+					{
+						file = tempFile;
+						directoryPath.setText(tempFile.getAbsolutePath());
+					}
+				}
+			});
+		}
+		
 	}
 
 }

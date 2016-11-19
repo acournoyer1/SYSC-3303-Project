@@ -1,7 +1,11 @@
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
-import java.util.Scanner;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 /**
  * Creates a instance of intermediate host the mediates requests between client and server
@@ -9,10 +13,11 @@ import java.util.Scanner;
  * Team 11  
  * V1.16
  */
-public class IntermediateHost extends Thread {
+public class IntermediateHost {
 	private DatagramSocket receiveSocket;
 	private ArrayList<Thread> threads;
 	private boolean verbose;
+	private Error error;
 	
 	//Well known ports for intermediate and server
 	private static final int PORT_NUMBER = 23;
@@ -58,43 +63,20 @@ public class IntermediateHost extends Thread {
 		}
 	}
 	
-	@Override
-	public void run()
-	{
-		Scanner s = new Scanner(System.in);
-		boolean verboseCheck = false;
-		while(!verboseCheck)
-		{
-			System.out.println("For verbose mode, enter v or verbose.");
-			System.out.println("For quiet mode, enter q or quiet.");
-			String verbose = s.nextLine();
-			if(verbose.equals("v") || verbose.equals("verbose"))
-			{
-				this.verbose = true;
-				verboseCheck = true;
-			}
-			else if (verbose.equals("q") || verbose.equals("quiet"))
-			{
-				this.verbose = false;
-				verboseCheck = true;
-			}
-			else
-			{
-				System.out.println("Please enter a valid string for verbose/quiet mode.");
-			}
-		}
-		s.close();
-		this.sendReceive();
-	}
 	
 	/*
 	*    Creates a host instance and runs it
 	*/
 	public static void main(String args[])
     {
-    	Thread host = new IntermediateHost();
-    	host.start();
+    	IntermediateHost host = new IntermediateHost();
+    	host.setUp();
     }
+	
+	public void setUp()
+	{
+		new HostSetup();
+	}
 	
 	/*
 	*   Creates the host thread that deals with the DatagramPacket
@@ -178,8 +160,13 @@ public class IntermediateHost extends Thread {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+<<<<<<< HEAD
 					try {//TODO changed SERVER_PORT_NUMBER to serverPort because server wasnt receiving acks as acks but rather as new requests. 
 						packet = new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(), serverPort );
+=======
+					try {
+						packet = new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(), serverPort);
+>>>>>>> refs/remotes/origin/master
 					} catch (UnknownHostException e) {
 						e.printStackTrace();
 					}
@@ -249,6 +236,151 @@ public class IntermediateHost extends Thread {
 		{
 			this.sendReceive();
 		}
+	}
+	
+	@SuppressWarnings("serial")
+	private class HostSetup extends JDialog
+	{
+		private ErrorPane errorPane;
+		private JRadioButton verboseRadio;
+		private JButton okButton;
+		private JButton cancelButton;
+		
+		public HostSetup()
+		{
+			this.errorPane = new ErrorPane();
+			this.verboseRadio = new JRadioButton("Verbose", true);
+			this.okButton = new JButton("OK");
+			this.cancelButton = new JButton("Cancel");
+			
+			JRadioButton quietRadio = new JRadioButton("Quiet");
+			ButtonGroup group = new ButtonGroup();
+			group.add(verboseRadio);
+			group.add(quietRadio);
+			
+			JPanel p = new JPanel();
+			p.add(verboseRadio);
+			p.add(quietRadio);
+			
+			JPanel buttons = new JPanel();
+			buttons.add(okButton);
+			buttons.add(cancelButton);
+			
+			this.add(p, BorderLayout.NORTH);
+			this.add(errorPane, BorderLayout.CENTER);
+			this.add(buttons, BorderLayout.SOUTH);
+			this.setResizable(false);
+			errorPane.setBorder(new EmptyBorder(this.getInsets()));
+			setUpListeners();
+			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+			this.setLocationRelativeTo(null);
+			this.setTitle("Error Generator Setup");
+			this.pack();
+			this.setVisible(true);
+		}
+		
+		private void setUpListeners()
+		{
+			okButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					error = errorPane.getError();
+					if(verboseRadio.isSelected()) verbose = true;
+					else verbose = false;
+					dispose();
+					sendReceive();
+				}
+			});
+			cancelButton.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e) 
+				{
+					System.out.println("Error Generator creation cancelled.\n");
+					dispose();
+					System.exit(0);
+				}
+			});
+		}
+	}
+	
+	@SuppressWarnings("serial")
+	private class ErrorPane extends JPanel
+	{
+		private JComboBox<ErrorType> errorType;
+		private JComboBox<PacketType> packetType;
+		private JTextField blockField;
+		
+		public ErrorPane()
+		{
+			errorType = new JComboBox<ErrorType>(ErrorType.values());
+			packetType = new JComboBox<PacketType>(PacketType.values());
+			blockField = new JTextField("1");
+			
+			this.add(new JLabel("Error: "));
+			this.add(errorType);
+			this.add(packetType);
+			this.add(blockField);
+			blockField.setColumns(2);
+		}
+		
+		public Error getError()
+		{
+			return new Error((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()));
+		}
+	}
+	
+	private class Error
+	{
+		private ErrorType errorType;
+		private PacketType packetType;
+		private int blockNumber;
+		private boolean executed;
+		
+		public Error(ErrorType e, PacketType p, int blockNumber)
+		{
+			this.errorType = e;
+			this.packetType = p;
+			this.blockNumber = blockNumber;
+			this.executed = false;
+		}
+		
+		public boolean hasExecuted()
+		{
+			return executed;
+		}
+		
+		public void execute()
+		{
+			executed = true;
+		}
+		
+		public ErrorType getError()
+		{
+			return errorType;
+		}
+		
+		public PacketType getPacketType()
+		{
+			return packetType;
+		}
+		
+		public int getBlock()
+		{
+			return blockNumber;
+		}
+	}
+	
+	public enum ErrorType
+	{
+		LOST, DELAYED, DUPLICATED
+	}
+	
+	public enum PacketType
+	{
+		DATA, ACK
 	}
 }
 
