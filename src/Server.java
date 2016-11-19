@@ -123,11 +123,11 @@ public class Server {
 				error[i] = packet[i+4];
 			}
 			errorMessage = error.toString();
-			if ((packet[2] == 0) && (packet[3] == 1) && ((errorMessage == message1a) || (errorMessage == message1b))) return true;
-			else if ((packet[2] == 0) && (packet[3] == 2) && ((errorMessage == message2a) || (errorMessage == message2b))) return true;
-			else if ((packet[2] == 0) && (packet[3] == 3) && ((errorMessage == message3a) || (errorMessage == message3b))) return true;
-			//else if ((packet[2] == 0) && (packet[3] == 4) && ((errorMessage == message4a) || (errorMessage == message4b))) return true;
-			else if ((packet[2] == 0) && (packet[3] == 5) && ((errorMessage == message5a) || (errorMessage == message5b))) return true;
+			if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("1")) && ((errorMessage == message1a) || (errorMessage == message1b))) return true;
+			else if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("2")) && ((errorMessage == message2a) || (errorMessage == message2b))) return true;
+			else if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("3")) && ((errorMessage == message3a) || (errorMessage == message3b))) return true;
+			//else if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("4")) && ((errorMessage == message4a) || (errorMessage == message4b))) return true;
+			else if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("5")) && ((errorMessage == message5a) || (errorMessage == message5b))) return true;
 		}
 		return false;
 	}
