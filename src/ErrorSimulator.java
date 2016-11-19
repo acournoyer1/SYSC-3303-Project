@@ -1,6 +1,9 @@
 import java.awt.BorderLayout;
+import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
@@ -309,24 +312,111 @@ public class ErrorSimulator {
 	{
 		private JComboBox<ErrorType> errorType;
 		private JComboBox<PacketType> packetType;
+		private JComboBox<Field> fields;
 		private JTextField blockField;
+		private JTextField corruptionField;
+		
+		private JPanel topPanel;
+		private JPanel bottomPanel;
 		
 		public ErrorPane()
 		{
+			topPanel = new JPanel();
+			bottomPanel = new JPanel();
 			errorType = new JComboBox<ErrorType>(ErrorType.values());
 			packetType = new JComboBox<PacketType>(PacketType.values());
+			fields = new JComboBox<Field>(Field.values());
+			fields.removeItem(Field.FILENAME);
+			fields.setEnabled(false);
 			blockField = new JTextField("0");
+			corruptionField = new JTextField("0");
+			corruptionField.setEditable(false);
 			
-			this.add(new JLabel("Error: "));
-			this.add(errorType);
-			this.add(packetType);
-			this.add(blockField);
+			topPanel.add(new JLabel("Error: "));
+			topPanel.add(errorType);
+			topPanel.add(packetType);
+			topPanel.add(blockField);
 			blockField.setColumns(2);
+			
+			bottomPanel = new JPanel();
+			bottomPanel.add(new JLabel("Change "));
+			bottomPanel.add(fields);
+			bottomPanel.add(new JLabel(" to "));
+			bottomPanel.add(corruptionField);
+			corruptionField.setColumns(2);
+			
+			JSplitPane split = new JSplitPane();
+			split.setOrientation(JSplitPane.VERTICAL_SPLIT);
+			split.setTopComponent(topPanel);
+			split.setBottomComponent(bottomPanel);
+			split.setBorder(BorderFactory.createEmptyBorder());
+			split.setDividerSize(0);
+			split.setEnabled(false);
+			
+			errorType.addItemListener(new ItemListener()
+			{
+				@Override
+				public void itemStateChanged(ItemEvent e) 
+				{
+					if(e.getStateChange() == e.SELECTED)
+					{
+						if(((JComboBox<ErrorType>)e.getSource()).getSelectedItem() == ErrorType.CORRUPTED)
+						{
+							fields.setEnabled(true);
+							corruptionField.setEditable(true);
+						}
+						else
+						{
+							fields.setEnabled(false);
+							corruptionField.setEditable(false);
+						}
+					}	
+				}	
+			});
+			packetType.addItemListener(new ItemListener()
+			{
+				@Override
+				public void itemStateChanged(ItemEvent e) 
+				{
+					if(e.getStateChange() == e.SELECTED)
+					{
+						if(((JComboBox<PacketType>)e.getSource()).getSelectedItem() == PacketType.REQUEST)
+						{
+							fields.removeAll();
+							fields.addItem(Field.OPCODE);
+							fields.addItem(Field.FILENAME);
+						}
+						else if(((JComboBox<PacketType>)e.getSource()).getSelectedItem() == PacketType.ACK)
+						{
+							fields.removeAll();
+							fields.addItem(Field.OPCODE);
+							fields.addItem(Field.BLOCKNUMBER);
+						}
+						else if(((JComboBox<PacketType>)e.getSource()).getSelectedItem() == PacketType.DATA)
+						{
+							fields.removeAll();
+							fields.addItem(Field.OPCODE);
+							fields.addItem(Field.BLOCKNUMBER);
+							fields.addItem(Field.DATA);
+						}
+					}	
+				}
+			});
+			
+			this.add(split);
 		}
 		
 		public Error getError()
 		{
-			return new Error((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()));
+			if(errorType.getSelectedItem() != ErrorType.CORRUPTED)
+			{
+				return new Error((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()));	
+			}
+			else
+			{
+				return new CorruptionError((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()), (Field)fields.getSelectedItem());
+			}
+			
 		}
 	}
 	
@@ -371,14 +461,36 @@ public class ErrorSimulator {
 		}
 	}
 	
-	public enum ErrorType
+	private class CorruptionError extends Error 
 	{
-		LOST, DELAYED, DUPLICATED
+		private Field field;
+		
+		public CorruptionError(ErrorType e, PacketType p, int blockNumber, Field f)
+		{
+			super(e, p, blockNumber);
+			this.field = f;
+		}
+		
+		public Field getField()
+		{
+			return field;
+		}
+		
 	}
 	
-	public enum PacketType
+	private enum ErrorType
 	{
-		DATA, ACK
+		LOST, DELAYED, DUPLICATED, CORRUPTED
+	}
+	
+	private enum PacketType
+	{
+		DATA, ACK, REQUEST
+	}
+	
+	private enum Field
+	{
+		OPCODE, BLOCKNUMBER, DATA, FILENAME
 	}
 }
 

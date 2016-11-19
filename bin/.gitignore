@@ -31,3 +31,14 @@
 /ErrorSimulator$HostSetup.class
 /ErrorSimulator$HostThread.class
 /ErrorSimulator$PacketType.class
+/ErrorSimulator$AckFields.class
+/ErrorSimulator$DataFields.class
+/ErrorSimulator$RequestFields.class
+/ErrorSimulator$CorruptedData$ErrorType.class
+/ErrorSimulator$CorruptedData$Field.class
+/ErrorSimulator$CorruptedData$PacketType.class
+/ErrorSimulator$CorruptedData.class
+/ErrorSimulator$CorruptionError.class
+/ErrorSimulator$Field.class
+/ErrorSimulator$ErrorPane$1.class
+/ErrorSimulator$ErrorPane$2.class
