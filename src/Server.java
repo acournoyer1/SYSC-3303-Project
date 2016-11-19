@@ -574,12 +574,7 @@ public class Server {
 				}
 				
 				if (lost){
-					try{
-						socket.send(ack);
-						lost=false; 
-					} catch (IOException e){
-						e.printStackTrace();
-					}
+					lost=false; 
 				} else { //run normally check for duplicates
 					incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
 					System.out.println("block id incoming:"+incomingBlockID+" and blockNUM: "+(blockNum+1));
@@ -658,6 +653,9 @@ public class Server {
 						}//end of running properly, exits while. 	
 					}else if (incomingBlockID <= blockNum){
 						System.out.println("incoming block is a duplicate");
+						try { 
+							socket.send(ack);
+						}catch (IOException e){ e.printStackTrace();}
 						
 					} else {
 						System.out.println("Unexpected Error Occured, Recieved Future data Packet");
