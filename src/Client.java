@@ -180,14 +180,8 @@ public class Client
 			}
 			//Start of Run after packet Received. 
 			if (lost){
-				System.out.println("Lost Packet resending if message was ack");
+				System.out.println("Lost Packet");
 				lost=false;
-				try{
-					//re-send ACK or Request. 
-					if(message.getData()[1]!=1) socket.send(message);
-				} catch(IOException e){
-					e.printStackTrace();
-				}
 			} //not lost but has an error
 			else if((receivePacket.getData()[3] == 1 || receivePacket.getData()[3] == 2) && receivePacket.getData()[1] == 5)
 			{
@@ -302,6 +296,10 @@ public class Client
 				}else if(tempIncomingBlockNum <= blockNum){
 					//is a duplicate restart loop
 					System.out.println("Incoming Data block is a duplicate");
+					try {
+						socket.send(message);
+					}catch(IOException e){e.printStackTrace();} 
+					
 				//incomingBlockNum Higher than blockNum should never happen, print error and resend ack.	
 				}else{
 					System.out.println("Unexpected Error Occured, Recieved Future Data Packet before ACK sent for present\n...Restarting Loop");
