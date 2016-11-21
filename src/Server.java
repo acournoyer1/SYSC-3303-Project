@@ -60,7 +60,8 @@ public class Server {
 		while(true)
 		{
 			//Waits to receive DatagramPacket from intermediate host
-			System.out.println("Server waiting...");
+			if(verbose)
+				System.out.println("Server waiting...");
 			byte[] msg = new byte[100];
 			DatagramPacket receivedPacket = new DatagramPacket(msg, msg.length);
 			try {
@@ -69,11 +70,70 @@ public class Server {
 				e.printStackTrace();
 				System.exit(1);
 			}
-			System.out.println("Request received from Host: " + Converter.convertMessage(msg));
+			if(verbose)
+				System.out.println("Request received from Host: " + Converter.convertMessage(msg));
 			
 			addThread(new ControlThread(receivedPacket));
 		}
 	}
+	
+	/**
+	 * Checks if the incoming packet is in the correct format and contains
+	 * valid information
+	 * 
+	 * @param packet that was received and will be processed
+	 * @return true if it is valid; false if it isn't valid
+	 */
+	public boolean checkIfValidPacket(byte[] packet) {
+		//Packet needs to starts with zero for all cases
+		if(packet[0] != new Byte("0")) return false;
+		//Checks it as a RRQ/WRQ packet
+		if(packet[1] == new Byte("1") || packet[1] == new Byte("2")) {
+			int numberOfZeroes = 0;
+			//Checks to make sure there are 2 zeroes after the read/write bytes
+			for (int i = 2; i <= packet.length-2; i++) {		
+				if (packet[i] == 0) {	
+					numberOfZeroes++;
+					//Makes sure filename and mode isn't missing
+					if (packet[i+1] == 0 || packet[i-1] == 0 || i == 2) return false;		
+				} 
+			}
+			//File should not have more or less than 2 zeroes (potential corruption)
+			if (numberOfZeroes == 2) return true;
+		} 
+		//Checks it as a DATA packet
+		else if (packet[1] == new Byte("3")) return true;
+		//Checks it as a ACK packet
+		else if ((packet[1] == new Byte("4")) && (packet.length == 4)) return true;
+		//Checks it as a ERROR packet
+		else if (packet[1] == new Byte("5")) {
+			String errorMessage;
+			String message1a = "Failed to read: 0501 - File not found.";
+			String message1b = "Failed to read: 0501 - File not found.";
+			String message2a = "Failed to read: 0502 - Access Violation.";
+			String message2b = "Failed to read: 0502 - Access Violation.";
+			String message3a = "Failed to read: 0503 - Disk full or allocation exceeded.";
+			String message3b = "Failed to read: 0503 - Disk full or allocation exceeded.";
+			//String message4a = "Failed to read: 0504 - Illegal TFTP operation.";
+			//String message4b = "Failed to read: 0504 - Illegal TFTP operation.";
+			String message5a = "Failed to read: 0505 - Unknown transfer ID.";
+			String message5b = "Failed to read: 0505 - Unknown transfer ID.";
+			byte[] error= new byte[96];
+			
+			if (packet[packet.length-1] != 0) return false;
+			for (int i = 0; packet[i] != 0; i++) {
+				error[i] = packet[i+4];
+			}
+			errorMessage = error.toString();
+			if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("1")) && ((errorMessage == message1a) || (errorMessage == message1b))) return true;
+			else if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("2")) && ((errorMessage == message2a) || (errorMessage == message2b))) return true;
+			else if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("3")) && ((errorMessage == message3a) || (errorMessage == message3b))) return true;
+			//else if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("4")) && ((errorMessage == message4a) || (errorMessage == message4b))) return true;
+			else if ((packet[2] == new Byte("0")) && (packet[3] == new Byte("5")) && ((errorMessage == message5a) || (errorMessage == message5b))) return true;
+		}
+		return false;
+	}
+
 
 	/*
 	 * Enables the user to select which directory will act as the server's file system
@@ -188,7 +248,8 @@ public class Server {
 				if(!f.exists())
 				{
 					System.out.println("Failed to read: 0501 - File not found. " + filename);
-					System.out.println("Sending error packet . . .");
+					if(verbose)
+						System.out.println("Sending error packet . . .");
 					createSendError(new Byte("1"), packet, receiveSocket);
 				}
 				//Check if the file can be read
@@ -198,7 +259,8 @@ public class Server {
 				}
 				//No errors, send valid response
 				else{
-					System.out.println("The request is a valid read request.");
+					if(verbose)
+						System.out.println("The request is a valid read request.");
 					addThread(new ReadThread(packet.getPort(), filename));
 				}
 			}
@@ -208,24 +270,28 @@ public class Server {
 				//Check if the file already exists
 				 if(Files.exists(path)){
 					System.out.println("Failed to write: 0506 - File already exists " + filename);
-					System.out.println("Sending error packet . . .");
+					if(verbose)
+						System.out.println("Sending error packet . . .");
 					createSendError(new Byte("6"), packet, receiveSocket);
 				}
 				//Check if can write
 				 else if(Files.isWritable(path)){
 					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
-					System.out.println("Sending error packet . . .");
+					if(verbose)
+						System.out.println("Sending error packet . . .");
 					createSendError(new Byte("2"), packet, receiveSocket);
 				}
 				//Check if there is enough space on the server
 				else if(f.getParentFile().getFreeSpace() < packet.getData().length){
 					System.out.println("Failed to write: 0503 - Not enough disk space. " + filename);
-					System.out.println("Sending error packet . . .");
+					if(verbose)
+						System.out.println("Sending error packet . . .");
 					createSendError(new Byte("3"), packet, receiveSocket);
 				}
 
 				else{
-					System.out.println("The request is a valid write request.");
+					if(verbose)
+						System.out.println("The request is a valid write request.");
 					addThread(new WriteThread(packet.getPort(), filename));
 				}
 			}
@@ -304,7 +370,8 @@ public class Server {
 			DatagramPacket msg = buildData(data, ++dataBlockCounter, hostPort);
 			try {
 				socket.send(msg);
-				System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
+				if(verbose)
+					System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -324,7 +391,8 @@ public class Server {
 					socket.setSoTimeout(2000);
 					socket.receive(receivePacket);
 				} catch (SocketTimeoutException ste){
-					System.out.println("Ack is delayed for block number "+(dataBlockCounter));
+					if(verbose)
+						System.out.println("Ack is delayed for block number "+(dataBlockCounter));
 					ACKdelay = true;
 				} catch (IOException e) { e.printStackTrace();}
 				if (ACKdelay){
@@ -332,7 +400,8 @@ public class Server {
 						socket.setSoTimeout(4000);
 						socket.receive(receivePacket);
 					} catch (SocketTimeoutException ste){
-						System.out.println("Ack is considdered lost.. Resending packet");
+						if(verbose)
+							System.out.println("Ack is considered lost.. Resending packet");
 						ACKdelay = false;
 						ACKlost = true;
 					} catch (IOException e) {e.printStackTrace();}
@@ -343,7 +412,8 @@ public class Server {
 						ACKlost=false;
 					} catch(IOException e){	e.printStackTrace();}
 				} else {
-					System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
+					if(verbose)
+						System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
 					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
 						System.out.println("Strange error.. exiting");
 						System.exit(1);
@@ -354,7 +424,8 @@ public class Server {
 					//duplicate/delayed ACK packet restart loop:
 					if (tempIncomingACK <= ACKcounter){
 						//msg should contain previous DatagramPacket to send
-						System.out.println("Received old ACK statent, delay and/or duplication Error detected\nResending Packet");
+						if(verbose)
+							System.out.println("Received old ACK statement, delay and/or duplication Error detected\nResending Packet");
 						try{ 
 							socket.send(msg);
 						} catch(IOException e){
@@ -371,7 +442,8 @@ public class Server {
 						}
 						msg = buildData(data, ++dataBlockCounter, hostPort);
 						try {
-							System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
+							if(verbose)
+								System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
 							socket.send(msg);
 						} catch (IOException e) {
 							e.printStackTrace();
@@ -381,11 +453,12 @@ public class Server {
 						} catch (IOException e1) {
 							e1.printStackTrace();
 						}
-						
-						System.out.println("Bytes left in file"+available);
+						if(verbose)
+							System.out.println("Bytes left in file"+available);
 					}//default case for circumstance where tempIncomingACK > ACKcounter which should never be possible.
 					else{
-						System.out.println("Unexpected Error Occurred, ACK for future packet Recieved");
+						if(verbose)
+							System.out.println("Unexpected Error Occurred, ACK for future packet Recieved");
 						try{ 
 							socket.send(msg);
 						} catch(IOException e){
@@ -396,7 +469,8 @@ public class Server {
 			}//END Loop
 			//Receive Final ACK to make sure that the thing sent:
 			while (ACKcounter < dataBlockCounter){
-				System.out.println("entered seccond loop because ACKcounter is "+ACKcounter + " while block number is: "+dataBlockCounter);
+				if(verbose)
+					System.out.println("entered seccond loop because ACKcounter is "+ACKcounter + " while block number is: "+dataBlockCounter);
 				
 				ACKdelay=false; ACKlost=false;
 				
@@ -406,7 +480,8 @@ public class Server {
 					socket.setSoTimeout(2000);
 					socket.receive(receivePacket);
 				} catch (SocketTimeoutException ste){
-					System.out.println("Ack is delayed for block number "+(dataBlockCounter));
+					if(verbose)
+						System.out.println("Ack is delayed for block number "+(dataBlockCounter));
 					ACKdelay = true;
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -416,7 +491,8 @@ public class Server {
 						socket.setSoTimeout(4000);
 						socket.receive(receivePacket);
 					} catch (SocketTimeoutException ste){
-						System.out.println("Ack is considdered lost.. Resending packet");
+						if(verbose)
+							System.out.println("Ack is considered lost.. Resending packet");
 						ACKdelay = false;
 						ACKlost = true;
 					} catch (IOException e) {
@@ -438,8 +514,10 @@ public class Server {
 					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
 					if(tempIncomingACK == dataBlockCounter) {
 						ACKcounter = tempIncomingACK;
-						System.out.println("ACK recieved ");
-						System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
+						if(verbose){
+							System.out.println("ACK recieved ");
+							System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
+						}
 						break;
 					}else {
 						try{ socket.send(msg);} catch(IOException e){ e.printStackTrace();}
@@ -555,11 +633,13 @@ public class Server {
 				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 				try {
 					socket.setSoTimeout(2000);
-					System.out.println("Waiting for data. . .");
+					if(verbose)
+						System.out.println("Waiting for data. . .");
 					socket.receive(receivePacket);
 				}catch (SocketTimeoutException ste){
 					delayed=true; 
-					System.out.println("Data Delayed, waiting...");
+					if(verbose)
+						System.out.println("Data Delayed, waiting...");
 				} catch (IOException e) {e.printStackTrace();}
 				
 				if(delayed){
@@ -569,7 +649,8 @@ public class Server {
 					} catch (SocketTimeoutException ste) {
 						lost = true;
 						delayed= false;
-						System.out.println("Packet declared LOST, Resending Packet");
+						if(verbose)
+							System.out.println("Packet declared LOST, Resending Packet");
 					} catch (IOException e) {e.printStackTrace();}
 				}
 				
@@ -577,10 +658,12 @@ public class Server {
 					lost=false; 
 				} else { //run normally check for duplicates
 					incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
-					System.out.println("block id incoming:"+incomingBlockID+" and blockNUM: "+(blockNum+1));
+					if(verbose)
+						System.out.println("block id incoming:"+incomingBlockID+" and blockNUM: "+(blockNum+1));
 					if(incomingBlockID == blockNum+1){
 						blockNum=incomingBlockID;
-						System.out.println("recieved Block Num "+blockNum);
+						if(verbose)
+							System.out.println("recieved Block Num "+blockNum);
 						//Copies the data into a new array
 						byte[] data = new byte[512];
 						for(int i = 0, j = 4; i < data.length && j < receiveMsg.length; i++, j++)
@@ -619,7 +702,8 @@ public class Server {
 
 							//Writes the last bit of data to the file
 						} else{
-							System.out.println("Entered final loop, index is not -1 anymore.");
+							if(verbose)
+								System.out.println("Entered final loop, index is not -1 anymore.");
 							try {
 								fos.write(data, 0, index);
 							} catch (IOException e) {
@@ -640,25 +724,29 @@ public class Server {
 									socket.receive(receivePacket);
 								}catch (SocketTimeoutException ste){
 									received = false;
-									System.out.println("Assumed that the Client Received the Final ACK after 10 secconds without a message");
+									if(verbose)
+										System.out.println("Assumed that the Client Received the Final ACK after 10 secconds without a message");
 								} catch(IOException e){e.printStackTrace();}
 								if (received){
 									incomingBlockID = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
 									if(incomingBlockID <= blockNum){
 										try{ socket.send(ack);} catch(IOException e) {e.printStackTrace();}
-										System.out.println("Resending ACK");
+										if(verbose)
+											System.out.println("Resending ACK");
 									}
 								}
 							}while(received);
 						}//end of running properly, exits while. 	
 					}else if (incomingBlockID <= blockNum){
-						System.out.println("incoming block is a duplicate");
+						if(verbose)
+							System.out.println("Incoming block is a duplicate");
 						try { 
 							socket.send(ack);
 						}catch (IOException e){ e.printStackTrace();}
 						
 					} else {
-						System.out.println("Unexpected Error Occured, Recieved Future data Packet");
+						if(verbose)
+							System.out.println("Unexpected Error Occured, Recieved Future data Packet");
 						try {
 							socket.send(ack);
 						} catch(IOException e){
@@ -735,7 +823,7 @@ public class Server {
 			this.pack();
 			this.setUpListeners();
 			this.setLocationRelativeTo(null);
-			this.setTitle("Client Setup");
+			this.setTitle("Server Setup");
 			this.setVisible(true);
 			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		}
