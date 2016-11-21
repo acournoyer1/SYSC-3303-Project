@@ -8,18 +8,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Scanner;
 
-import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileSystemView;
 
 
@@ -34,6 +33,7 @@ public class Server {
 	private ArrayList<Thread> threads;
 	private File directory;
 	private boolean verbose;
+	private boolean shutdown = false;
 
 	//Well-known server port number
 	private static final int PORT_NUMBER = 69;
@@ -64,11 +64,17 @@ public class Server {
 				System.out.println("Server waiting...");
 			byte[] msg = new byte[100];
 			DatagramPacket receivedPacket = new DatagramPacket(msg, msg.length);
-			try {
-				receiveSocket.receive(receivedPacket);
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
+			while(!shutdown){
+				try {
+					receiveSocket.setSoTimeout(1000);
+					receiveSocket.receive(receivedPacket);
+					break;
+				} catch (IOException e) {
+					if(shutdown){
+						System.out.println("Shutting Down. . . ");
+						return;
+					}
+				}
 			}
 			if(verbose)
 				System.out.println("Request received from Host: " + Converter.convertMessage(msg));
@@ -589,10 +595,10 @@ public class Server {
 			}
 		}
 		
-		public String getFilename()
+		/*public String getFilename()
 		{
 			return filename;
-		}
+		}*/
 
 		/*
 		 *   Sends request to intermediate host then writes to the file  
@@ -725,7 +731,7 @@ public class Server {
 								}catch (SocketTimeoutException ste){
 									received = false;
 									if(verbose)
-										System.out.println("Assumed that the Client Received the Final ACK after 10 secconds without a message");
+										System.out.println("Assumed that the Client Received the Final ACK after 10 seconds without a message");
 								} catch(IOException e){e.printStackTrace();}
 								if (received){
 									incomingBlockID = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
@@ -805,7 +811,7 @@ public class Server {
 			g.add(quietRadio);
 			
 			JPanel directoryPanel = new JPanel();
-			directoryPanel.add(new JLabel("Client Directory: "));
+			directoryPanel.add(new JLabel("Server Directory: "));
 			directoryPanel.add(this.directoryPath);
 			directoryPanel.add(this.browseButton);
 			
@@ -839,7 +845,14 @@ public class Server {
 					if(verboseRadio.isSelected()) verbose = true;
 					else verbose = false;
 					dispose();
-					sendReceive();
+					new ShutDown();
+					SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>(){
+						public Void doInBackground(){
+							sendReceive();
+							return null;
+						}
+					};
+					worker.execute();
 				}
 			});
 			cancelButton.addActionListener(new ActionListener()
@@ -866,6 +879,22 @@ public class Server {
 				}
 			});
 		}
-		
+		private class ShutDown{
+			private JFrame frame;
+			
+			public ShutDown(){
+				frame = new JFrame();
+				JButton stop = new JButton("Stop");
+				stop.addActionListener(new ActionListener(){
+					public void actionPerformed(ActionEvent e){
+						shutdown = true;
+						frame.dispose();
+					}
+				});
+				frame.add(stop);
+				frame.setSize(100, 100);
+				frame.setVisible(true);
+			}
+		}
 	}
 }
