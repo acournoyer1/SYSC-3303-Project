@@ -216,17 +216,12 @@ public class ErrorSimulator {
 							}catch(SocketException e){}
 							break;
 						case DELAYED:
-							try{
-								if(verbose)
+							if(verbose)
 									System.out.println("Delaying packet. . . " + pt);
-								//Delay the packet by sleeping the thread before sending
-								Thread.sleep(error.getDelay());
-								socket.send(packet);
-								error.execute();
-								break;
-							} catch(InterruptedException ie){
-								ie.printStackTrace();
-							}
+							//Delay the packet by sleeping the thread before sending
+							new DelayThread(this.socket, error.getDelay(), packet).start();
+							error.execute();
+							break;
 						}
 					}
 					else
@@ -241,6 +236,31 @@ public class ErrorSimulator {
 		public void run()
 		{
 			this.sendReceive();
+		}
+	}
+	
+	private class DelayThread extends Thread 
+	{
+		private DatagramSocket socket;
+		private DatagramPacket p;
+		private int delay;
+		
+		public DelayThread(DatagramSocket socket, int delay, DatagramPacket p)
+		{
+			this.socket = socket;
+			this.delay = delay;
+			this.p = p;
+		}
+		
+		@Override
+		public void run()
+		{
+			try {
+				Thread.sleep(delay);
+				socket.send(p);
+			} catch (InterruptedException | IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
