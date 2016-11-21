@@ -48,7 +48,8 @@ public class ErrorSimulator {
 		while(true)
 		{
 			//Receives DatagramPacket from client
-			System.out.println("Host waiting...");
+			if(verbose)
+				System.out.println("Host waiting...");
 			byte[] msg = new byte[100];
 			DatagramPacket receivedPacketClient = new DatagramPacket(msg, msg.length);
 			try {
@@ -57,7 +58,8 @@ public class ErrorSimulator {
 				e.printStackTrace();
 				System.exit(1);
 			}
-			System.out.println("Request received from Client: " + Converter.convertMessage(msg));
+			if(verbose)
+				System.out.println("Request received from Client: " + Converter.convertMessage(msg));
 			
 			//Creates new thread to deal with DatagramPacket
 			HostThread thread = new HostThread(receivedPacketClient.getPort(), msg);
@@ -146,12 +148,14 @@ public class ErrorSimulator {
 				if(!error.hasExecuted() && error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
 					switch(error.getError()){
 					case LOST:
-						if(verbose)System.out.println("Losing packet. . . " + pt);
+						if(verbose)
+							System.out.println("Losing packet. . . " + pt);
 						error.execute();
 						break;
 					case DUPLICATED:
 						try{
-							if(verbose)System.out.println("Duplicating Packet. . . " + pt);
+							if(verbose)
+								System.out.println("Duplicating Packet. . . " + pt);
 							socket.send(packet);
 							socket.send(packet);
 							error.execute();
@@ -159,7 +163,8 @@ public class ErrorSimulator {
 						break;
 					case DELAYED:
 						try{
-							if(verbose)System.out.println("Delaying packet. . . " + pt);
+							if(verbose)
+								System.out.println("Delaying packet. . . " + pt);
 							//Delay the packet by sleeping the thread before sending
 							Thread.sleep(2);
 							socket.send(packet);
@@ -197,12 +202,14 @@ public class ErrorSimulator {
 					if(!error.hasExecuted() && error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
 						switch(error.getError()){
 						case LOST:
-							if(verbose)System.out.println("Losing packet. . . " + pt);
+							if(verbose)
+								System.out.println("Losing packet. . . " + pt);
 							error.execute();
 							break;
 						case DUPLICATED:
 							try{
-								if(verbose)System.out.println("Duplicating Packet. . . " + pt);
+								if(verbose)
+									System.out.println("Duplicating Packet. . . " + pt);
 								socket.send(packet);
 								socket.send(packet);
 								error.execute();
@@ -210,7 +217,8 @@ public class ErrorSimulator {
 							break;
 						case DELAYED:
 							try{
-								if(verbose)System.out.println("Delaying packet. . . " + pt);
+								if(verbose)
+									System.out.println("Delaying packet. . . " + pt);
 								//Delay the packet by sleeping the thread before sending
 								Thread.sleep(2);
 								socket.send(packet);
