@@ -282,9 +282,9 @@ public class ErrorSimulator {
 			errorPane.setBorder(new EmptyBorder(this.getInsets()));
 			setUpListeners();
 			this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-			this.setLocationRelativeTo(null);
 			this.setTitle("Error Generator Setup");
 			this.pack();
+			this.setLocationRelativeTo(null);
 			this.setVisible(true);
 		}
 		
@@ -373,6 +373,13 @@ public class ErrorSimulator {
 							fields.setEnabled(true);
 							corruptionField.setEditable(true);
 						}
+						else if(((JComboBox<ErrorType>)e.getSource()).getSelectedItem() == ErrorType.DELAYED)
+						{
+							fields.removeAllItems();
+							fields.addItem(Field.DELAY_TIME);
+							fields.setEnabled(true);
+							corruptionField.setEditable(true);
+						}
 						else
 						{
 							fields.setEnabled(false);
@@ -386,23 +393,23 @@ public class ErrorSimulator {
 				@Override
 				public void itemStateChanged(ItemEvent e) 
 				{
-					if(e.getStateChange() == e.SELECTED)
+					if(e.getStateChange() == e.SELECTED && ((JComboBox<ErrorType>)e.getSource()).getSelectedItem() == ErrorType.CORRUPTED)
 					{
 						if(((JComboBox<PacketType>)e.getSource()).getSelectedItem() == PacketType.REQUEST)
 						{
-							fields.removeAll();
+							fields.removeAllItems();
 							fields.addItem(Field.OPCODE);
 							fields.addItem(Field.FILENAME);
 						}
 						else if(((JComboBox<PacketType>)e.getSource()).getSelectedItem() == PacketType.ACK)
 						{
-							fields.removeAll();
+							fields.removeAllItems();
 							fields.addItem(Field.OPCODE);
 							fields.addItem(Field.BLOCKNUMBER);
 						}
 						else if(((JComboBox<PacketType>)e.getSource()).getSelectedItem() == PacketType.DATA)
 						{
-							fields.removeAll();
+							fields.removeAllItems();
 							fields.addItem(Field.OPCODE);
 							fields.addItem(Field.BLOCKNUMBER);
 							fields.addItem(Field.DATA);
@@ -418,7 +425,9 @@ public class ErrorSimulator {
 		{
 			if(errorType.getSelectedItem() != ErrorType.CORRUPTED)
 			{
-				return new Error((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()));	
+				Error e = new Error((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()));
+				if(errorType.getSelectedItem() == ErrorType.DELAYED) e.setDelay(Integer.parseInt(corruptionField.getText()));
+				return e;
 			}
 			else
 			{
@@ -433,6 +442,7 @@ public class ErrorSimulator {
 		private ErrorType errorType;
 		private PacketType packetType;
 		private int blockNumber;
+		private int delayTime;
 		private boolean executed;
 		
 		public Error(ErrorType e, PacketType p, int blockNumber)
@@ -441,6 +451,16 @@ public class ErrorSimulator {
 			this.packetType = p;
 			this.blockNumber = blockNumber;
 			this.executed = false;
+		}
+		
+		public void setDelay(int delay)
+		{
+			delayTime = delay;
+		}
+		
+		public int getDelay()
+		{
+			return delayTime;
 		}
 		
 		public boolean hasExecuted()
@@ -498,7 +518,7 @@ public class ErrorSimulator {
 	
 	private enum Field
 	{
-		OPCODE, BLOCKNUMBER, DATA, FILENAME
+		OPCODE, BLOCKNUMBER, DATA, FILENAME, DELAY_TIME
 	}
 }
 
