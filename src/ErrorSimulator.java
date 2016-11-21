@@ -166,7 +166,7 @@ public class ErrorSimulator {
 							if(verbose)
 								System.out.println("Delaying packet. . . " + pt);
 							//Delay the packet by sleeping the thread before sending
-							Thread.sleep(2);
+							Thread.sleep(error.getDelay());
 							socket.send(packet);
 							error.execute();
 							break;
@@ -220,7 +220,7 @@ public class ErrorSimulator {
 								if(verbose)
 									System.out.println("Delaying packet. . . " + pt);
 								//Delay the packet by sleeping the thread before sending
-								Thread.sleep(2);
+								Thread.sleep(error.getDelay());
 								socket.send(packet);
 								error.execute();
 								break;
@@ -351,7 +351,7 @@ public class ErrorSimulator {
 			bottomPanel.add(fields);
 			bottomPanel.add(new JLabel(" to "));
 			bottomPanel.add(corruptionField);
-			corruptionField.setColumns(2);
+			corruptionField.setColumns(5);
 			
 			JSplitPane split = new JSplitPane();
 			split.setOrientation(JSplitPane.VERTICAL_SPLIT);
