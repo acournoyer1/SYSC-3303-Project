@@ -460,7 +460,7 @@ public class Server {
 							e1.printStackTrace();
 						}
 						if(verbose)
-							System.out.println("Bytes left in file"+available);
+							System.out.println("Bytes left in file "+available);
 					}//default case for circumstance where tempIncomingACK > ACKcounter which should never be possible.
 					else{
 						if(verbose)
