@@ -85,6 +85,8 @@ Work Done:
 	- Created all timing diagrams 
 	
 	->Ryan 	
+	- Added a way to parse error packets properly
+	- Implemented invalid TID (Error 5)
 	- Error Simulator Algorithm
 	- Server shutdown
 	- Verbose implementation
