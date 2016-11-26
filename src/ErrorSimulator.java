@@ -222,6 +222,16 @@ public class ErrorSimulator {
 							new DelayThread(this.socket, error.getDelay(), packet).start();
 							error.execute();
 							break;
+						case CORRUPTED:
+							break;
+						case WRONG_TID:
+							if(verbose) System.out.println("Sending an extra " + pt + " to the destination from a wrong TID.");
+							socket.send(packet);
+							new WrongTIDThread(packet.getData(), currentDest).start();
+							error.execute();
+							break;
+						default:
+							break;
 						}
 					}
 					else
@@ -259,6 +269,35 @@ public class ErrorSimulator {
 				Thread.sleep(delay);
 				socket.send(p);
 			} catch (InterruptedException | IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private class WrongTIDThread extends Thread
+	{
+		private DatagramSocket socket;
+		private byte[] msg;
+		private int destination;
+		
+		public WrongTIDThread(byte[] msg, int destination)
+		{
+			try {
+				this.socket = new DatagramSocket();
+			} catch (SocketException e) {
+				e.printStackTrace();
+			}
+			this.destination = destination;
+			this.msg = msg;
+		}
+		
+		@Override
+		public void run()
+		{
+			try {
+				DatagramPacket p = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), destination);
+				socket.send(p);
+			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
@@ -528,7 +567,7 @@ public class ErrorSimulator {
 	
 	private enum ErrorType
 	{
-		LOST, DELAYED, DUPLICATED, CORRUPTED
+		LOST, DELAYED, DUPLICATED, CORRUPTED, WRONG_TID
 	}
 	
 	private enum PacketType
