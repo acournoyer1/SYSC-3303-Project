@@ -186,7 +186,7 @@ public class Server {
 		public void run()
 		{
 			byte[] msg = packet.getData();
-			//Checks if request is valid (read or write)
+			/*//Checks if request is valid (read or write)
 			if(!(msg[0] == 0 && (msg[1] == 1 || msg[1] == 2)))
 			{
 				System.out.println("Request is invalid.");
@@ -222,8 +222,14 @@ public class Server {
 						System.exit(1);
 					}
 				}
-			}
+			}*/
 
+			if(!checkIfValidPacket(msg)){
+				System.out.println("Invalid packet format: 0504 - Invalid packet. ");
+				if(verbose)
+					System.out.println("Sending error packet . . .");
+				createSendError(new Byte("4"), packet, receiveSocket);
+			}
 			//Extracts the filename
 			int index = -1;
 			for(int i = 2; i < msg.length; i++)
