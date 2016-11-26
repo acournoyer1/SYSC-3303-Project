@@ -2,7 +2,7 @@
  * Creates a converter that turn a byte array into a string which it returns
  * 
  * Team 11  
- * V1.16
+ * V1.17
  */
 public class Converter {
 
@@ -43,5 +43,13 @@ public class Converter {
 		s += "] " + byteString; 
 		
 		return s;
+	}
+	
+	/*
+	*   Converts byte array into a string for the error message
+	*/
+	public static String convertErrorMessage(byte[] message)
+	{
+		return new String(message);
 	}
 }
