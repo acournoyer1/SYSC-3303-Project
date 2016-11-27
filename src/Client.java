@@ -96,9 +96,9 @@ public class Client
 		//Adds "3" for data packet format followed by block number
 		byte[] msg = new byte[516];
 		msg[1] = 3;				
-		msg[2] = (byte) ((byte)dataBlockCounter/256);
-		msg[3] = (byte) ((byte)dataBlockCounter - dataBlockCounter/256);
-
+		msg[2] = (byte)(dataBlockCounter/256);
+		msg[3] = (byte)(dataBlockCounter%256);
+		System.out.println(msg[2]+", "+msg[3]);
 		//Goes through the data and adds it to the message
 		for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)	
 		{
@@ -221,7 +221,7 @@ public class Client
 				//TODO: clean this up a bit remove extraneous conditions 
 				//Error Handling Iteration 3: 
 				//parse bytes into int:
-				tempIncomingBlockNum = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);		
+				tempIncomingBlockNum = ((receiveMsg[2])*256 + receiveMsg[3]);		
 				if (tempIncomingBlockNum == blockNum+1){ //expected condition incomingBolockNum == blockNum+1: run normally
 					blockNum=tempIncomingBlockNum;
 					if(verbose)
@@ -463,7 +463,7 @@ public class Client
 					e.printStackTrace();
 				}
 			}//Check for File related errors
-			else if((receivePacket.getData()[3] == 2 || receivePacket.getData()[3] == 3 || receivePacket.getData()[3] == 6) && receivePacket.getData()[1] == 5){
+			else if((receivePacket.getData()[3] == 2 || receivePacket.getData()[3] == 3 || receivePacket.getData()[3] == 6) && receivePacket.getData()[1] == 5 ||receivePacket.getData()[1]==5){
 				String code = "";
 				switch(receiveMsg[3]){
 				case 2:
