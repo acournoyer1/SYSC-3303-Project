@@ -415,18 +415,18 @@ public class Client
 		int dataBlockCounter=0;
 		boolean ACKdelayed=false;
 		boolean ACKlost=false;
-		
+		boolean emptyPacket = false; 
 		int available = 0;
 		try {
 			available = is.available();
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
+		DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 		while(available > 0) {		
 			receiveMsg = new byte[4];
 			//TODO: condense code and place in method for next iteration. 
-			//Receives response from server
-			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);	
+			//Receives response from server	
 			try {
 				socket.setSoTimeout(2000);
 				if(verbose)
@@ -510,6 +510,7 @@ public class Client
 						e1.printStackTrace();
 					}
 					System.out.println("Bytes left in file"+available);
+					emptyPacket = available == 512; 
 				} else if(tempIncomingACK < dataBlockCounter){ 
 					//incoming ACK is for block before the one just sent out by this Client
 					if(verbose)
@@ -530,6 +531,11 @@ public class Client
 				}			
 			}
 		}//END Loop
+		if(emptyPacket){
+			data = new byte[512];
+			message = buildData(data, ++dataBlockCounter, receivePacket.getPort());
+			
+		}
 		//TODO: add to method reduce "loose" code;  
 		//Receive Final ACK to make sure that the thing sent:
 		while (ACKcounter < dataBlockCounter) {

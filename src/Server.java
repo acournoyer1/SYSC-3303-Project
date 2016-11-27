@@ -383,6 +383,7 @@ public class Server {
 			int tempIncomingACK=0;
 			boolean ACKdelay = false; 
 			boolean ACKlost = false;
+			boolean emptyPacket = false;
 			try {
 				is.read(data);
 			} catch (IOException e1) {
@@ -401,13 +402,14 @@ public class Server {
 			} catch (IOException e2) {
 				e2.printStackTrace();
 			}
+			receiveMsg = new byte[4];
+			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+			
 			//Continually reads data from the file until no more data is available
 			while(available > 0) {
 				ACKdelay = false;
 				ACKlost = false;
 				receiveMsg = new byte[4];
-
-				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 				try {
 					socket.setSoTimeout(2000);
 					socket.receive(receivePacket);
@@ -474,6 +476,7 @@ public class Server {
 						} catch (IOException e1) {
 							e1.printStackTrace();
 						}
+						emptyPacket = available == 512;
 						if(verbose)
 							System.out.println("Bytes left in file "+available);
 					}//default case for circumstance where tempIncomingACK > ACKcounter which should never be possible.
@@ -488,6 +491,15 @@ public class Server {
 					}
 				}		
 			}//END Loop
+			if(emptyPacket){
+				data = new byte[512];
+				msg = buildData(data, ++dataBlockCounter, receivePacket.getPort());
+				try {
+					socket.send(msg);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 			//Receive Final ACK to make sure that the thing sent:
 			while (ACKcounter < dataBlockCounter){
 				if(verbose)
@@ -496,7 +508,6 @@ public class Server {
 				ACKdelay=false; ACKlost=false;
 				
 				receiveMsg = new byte[4];
-				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 				try {
 					socket.setSoTimeout(2000);
 					socket.receive(receivePacket);
