@@ -25,6 +25,8 @@ public class Client
 	private File directory;
 	private boolean verbose;
 	private String filename;
+	
+	private Integer hostTID;
 
 	/*
 	 * Constructor for objects of class Client
@@ -88,6 +90,44 @@ public class Client
 
 	}
 
+	/**
+	 * Sends error packet to the client
+	 * 
+	 * @param corresponding error number
+	 * @param corresponding packet
+	 * @param socket to send off of from current thread
+	 */
+	private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket, String message){
+		
+		byte[] b = message.getBytes() != null ? new byte[4 + message.getBytes().length + 1] : new byte[4];
+		b[0] = 0;
+		b[1] = 5;
+		b[2] = 0;
+		b[3] = errorNum;
+		
+		int i = 4;
+		
+		if(message.getBytes() != null){
+			for(byte msgB : message.getBytes()){
+				b[i++] = msgB;
+			}
+		}
+		
+		b[i++] = 0;
+		
+		try {			
+			DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+			try {
+				socket.send(ack);
+			}catch (IOException IOE){
+				IOE.printStackTrace();
+				System.exit(1);
+			}
+		} catch (UnknownHostException e){
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
 	/*
 	 *	Creates a DatagramPacket that contains the data requested
 	 */
@@ -198,8 +238,6 @@ public class Client
 					//"Continue" by sending the thread back to the beginning of the while loop
 					continue;
 				}
-				
-				System.out.println("Error packet received. Code: 050" + receivePacket.getData()[3] + " " + code + ". Stopping request.");
 				try {
 					fos.close();
 				} catch (IOException e1) {
@@ -473,7 +511,8 @@ public class Client
 					e.printStackTrace();
 				}
 			}//Check for File related errors
-			else if((receivePacket.getData()[3] == 2 || receivePacket.getData()[3] == 3 || receivePacket.getData()[3] == 6) && receivePacket.//Verify that the TID of the received packet is correct
+			else if((receivePacket.getData()[3] == 2 || receivePacket.getData()[3] == 3 || receivePacket.getData()[3] == 6) && receivePacket.getData()[1] == 5){
+				//Verify that the TID of the received packet is correct
 				if(receivePacket.getPort() != hostTID){
 					//If the ports do not match, send an errorpacket to the received packet
 					createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);

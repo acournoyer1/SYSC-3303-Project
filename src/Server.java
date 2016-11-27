@@ -273,10 +273,9 @@ public class Server {
 			}*/
 
 			if(!checkIfValidPacket(msg)){
-				System.out.println("Invalid packet format: 0504 - Invalid packet. ");
 				if(verbose)
 					System.out.println("Sending error packet . . .");
-				createSendError(new Byte("4"), packet, receiveSocket);
+				createSendError(new Byte("4"), packet, receiveSocket, "Invalid packet format: 0504 - Invalid packet. ");
 			}
 			//Extracts the filename
 			int index = -1;
@@ -492,7 +491,7 @@ public class Server {
 						}
 						msg = buildData(data, ++dataBlockCounter, hostPort);
 						try {
-o							if(verbose)
+							if(verbose)
 								System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
 							socket.send(msg);
 						} catch (IOException e) {

@@ -1,5 +1,3 @@
-/Server$ServerSetup$1$1.class
-/Server$ServerSetup$ShutDown$1.class
-/Server$ServerSetup$ShutDown.class
-/ErrorSimulator$DelayThread.class
-/ErrorSimulator$WrongTIDThread.class
+/Client$ClientSetup$1.class
+/Client$ClientSetup$2.class
+/Client$ClientSetup$3.class
