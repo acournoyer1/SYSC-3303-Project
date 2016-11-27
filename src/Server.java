@@ -182,6 +182,45 @@ public class Server {
 		threads.remove(t);
 	}
 	
+	/**
+	 * Sends error packet to the client
+	 * 
+	 * @param corresponding error number
+	 * @param corresponding packet
+	 * @param socket to send off of from current thread
+	 */
+	private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket, String message){
+		
+		byte[] b = message.getBytes() != null ? new byte[4 + message.getBytes().length + 1] : new byte[4];
+		b[0] = 0;
+		b[1] = 5;
+		b[2] = 0;
+		b[3] = errorNum;
+		
+		int i = 4;
+		
+		if(message.getBytes() != null){
+			for(byte msgB : message.getBytes()){
+				b[i++] = msgB;
+			}
+		}
+		
+		b[i++] = 0;
+		
+		try {			
+			DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+			try {
+				socket.send(ack);
+			}catch (IOException IOE){
+				IOE.printStackTrace();
+				System.exit(1);
+			}
+		} catch (UnknownHostException e){
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
+	
 	private class ControlThread extends Thread
 	{
 		private DatagramPacket packet;
@@ -268,15 +307,15 @@ public class Server {
 				//Check if file exists
 				if(!f.exists())
 				{
-					System.out.println("Failed to read: 0501 - File not found. " + filename);
+					//System.out.println("Failed to read: 0501 - File not found. " + filename);
 					if(verbose)
 						System.out.println("Sending error packet . . .");
-					createSendError(new Byte("1"), packet, receiveSocket);
+					createSendError(new Byte("1"), packet, receiveSocket, "Failed to read: 0501 - File not found. " + filename);
 				}
 				//Check if the file can be read
 				else if(!Files.isReadable(path)){
-					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
-					createSendError(new Byte("2"), packet, receiveSocket);
+					//System.out.println("Failed to read: 0502 - Access Violation. " + filename);
+					createSendError(new Byte("2"), packet, receiveSocket, "Failed to read: 0502 - Access Violation. " + filename);
 				}
 				//No errors, send valid response
 				else{
@@ -290,24 +329,21 @@ public class Server {
 			{
 				//Check if the file already exists
 				 if(Files.exists(path)){
-					System.out.println("Failed to write: 0506 - File already exists " + filename);
 					if(verbose)
 						System.out.println("Sending error packet . . .");
-					createSendError(new Byte("6"), packet, receiveSocket);
+					createSendError(new Byte("6"), packet, receiveSocket, "Failed to write: 0506 - File already exists " + filename);
 				}
 				//Check if can write
 				 else if(Files.isWritable(path)){
-					System.out.println("Failed to read: 0502 - Access Violation. " + filename);
 					if(verbose)
 						System.out.println("Sending error packet . . .");
-					createSendError(new Byte("2"), packet, receiveSocket);
+					createSendError(new Byte("2"), packet, receiveSocket, "Failed to read: 0502 - Access Violation. " + filename);
 				}
 				//Check if there is enough space on the server
 				else if(f.getParentFile().getFreeSpace() < packet.getData().length){
-					System.out.println("Failed to write: 0503 - Not enough disk space. " + filename);
 					if(verbose)
 						System.out.println("Sending error packet . . .");
-					createSendError(new Byte("3"), packet, receiveSocket);
+					createSendError(new Byte("3"), packet, receiveSocket, "Failed to write: 0503 - Not enough disk space. " + filename);
 				}
 
 				else{
@@ -317,22 +353,6 @@ public class Server {
 				}
 			}
 			removeThread(this);
-		}
-
-		private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket){
-			byte[] b = {0, 5, 0, errorNum};
-			try {			
-				DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
-				try {
-					socket.send(ack);
-				}catch (IOException IOE){
-					IOE.printStackTrace();
-					System.exit(1);
-				}
-			} catch (UnknownHostException e){
-				e.printStackTrace();
-				System.exit(1);
-			}
 		}
 	}
 
@@ -433,6 +453,15 @@ public class Server {
 						ACKlost=false;
 					} catch(IOException e){	e.printStackTrace();}
 				} else {
+					//Verify that the TID of the received packet is correct
+					if(receivePacket.getPort() != hostPort){
+						if(verbose)
+							System.out.println("Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostPort);
+						//If the ports do not match, send an errorpacket to the received packet
+						createSendError(new Byte("5"), receivePacket, socket, "Error 505: Invalid TID.");
+						//"Continue" by sending the thread back to the beginning of the while loop
+						continue;
+					}
 					if(verbose)
 						System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
 					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
@@ -463,7 +492,7 @@ public class Server {
 						}
 						msg = buildData(data, ++dataBlockCounter, hostPort);
 						try {
-							if(verbose)
+o							if(verbose)
 								System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
 							socket.send(msg);
 						} catch (IOException e) {
@@ -528,6 +557,15 @@ public class Server {
 						e.printStackTrace();
 					}
 				}else {
+					//Verify that the TID of the received packet is correct
+					if(receivePacket.getPort() != hostPort){
+						if(verbose)
+							System.out.println("Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostPort);
+						//If the ports do not match, send an errorpacket to the received packet
+						createSendError(new Byte("5"), receivePacket, socket, "Error 505: Invalid TID");
+						//"Continue" by sending the thread back to the beginning of the while loop
+						continue;
+					}
 					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
 						System.out.println("Strange error.. exiting");
 						System.exit(1);
@@ -677,7 +715,17 @@ public class Server {
 				
 				if (lost){
 					lost=false; 
-				} else { //run normally check for duplicates
+				} else { 
+					//Verify that the TID of the received packet is correct
+					if(receivePacket.getPort() != hostPort){
+						if(verbose)
+							System.out.println("Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostPort);
+						//If the ports do not match, send an errorpacket to the received packet
+						createSendError(new Byte("5"), receivePacket, socket, "Error 505: Invalid TID");
+						//"Continue" by sending the thread back to the beginning of the while loop
+						continue;
+					}
+					//run normally check for duplicates
 					//incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
 					incomingBlockID = ((receivePacket.getData()[2]<<8) + (receivePacket.getData()[3] & 0xff));
 					if(verbose)
@@ -751,6 +799,15 @@ public class Server {
 										System.out.println("Assumed that the Client Received the Final ACK after 10 seconds without a message");
 								} catch(IOException e){e.printStackTrace();}
 								if (received){
+									//Verify that the TID of the received packet is correct
+									if(receivePacket.getPort() != hostPort){
+										if(verbose)
+											System.out.println("Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostPort);
+										//If the ports do not match, send an errorpacket to the received packet
+										createSendError(new Byte("5"), receivePacket, socket, "Error 505: Invalid TID");
+										//"Continue" by sending the thread back to the beginning of the while loop
+										continue;
+									}
 									incomingBlockID = (int)(((receivePacket.getData()[2] * 256) + receivePacket.getData()[3]) & 0xffff);
 									if(incomingBlockID <= dataBlockCounter){
 										try{ socket.send(ack);} catch(IOException e) {e.printStackTrace();}
