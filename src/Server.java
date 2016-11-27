@@ -899,6 +899,7 @@ public class Server {
 				});
 				frame.add(stop);
 				frame.setSize(100, 100);
+				frame.setLocationRelativeTo(null);
 				frame.setVisible(true);
 			}
 		}

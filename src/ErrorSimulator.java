@@ -173,6 +173,16 @@ public class ErrorSimulator {
 						} catch(InterruptedException ie){
 							ie.printStackTrace();
 						}
+					case CORRUPTED:
+						break;
+					case WRONG_TID:
+						if(verbose) System.out.println("Sending an extra " + pt + " to the destination from a wrong TID.");
+						socket.send(packet);
+						new WrongTIDThread(packet.getData(), clientPort).start();
+						error.execute();
+						break;
+					default:
+						break;
 					}
 				}
 				else
