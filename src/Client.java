@@ -141,8 +141,8 @@ public class Client
 		}
 		
 		//Error Handling Variables:
-		int blockNum=-1;
-		int tempIncomingBlockNum=-1;
+		int dataBlockCounter=-1;
+		int incomingBlockID=-1;
 		boolean delayed=false; 
 		boolean lost=false;
 		//Creates a file where the data read from sever is stored
@@ -221,11 +221,11 @@ public class Client
 				//TODO: clean this up a bit remove extraneous conditions 
 				//Error Handling Iteration 3: 
 				//parse bytes into int:
-				tempIncomingBlockNum = ((receiveMsg[2])*256 + receiveMsg[3]);		
-				if (tempIncomingBlockNum == blockNum+1){ //expected condition incomingBolockNum == blockNum+1: run normally
-					blockNum=tempIncomingBlockNum;
+				incomingBlockID = ((receiveMsg[2]<<8) + (receiveMsg[3] & 0xff));		
+				if (incomingBlockID == dataBlockCounter+1){ //expected condition incomingBolockNum == dataBlockCounter+1: run normally
+					dataBlockCounter=incomingBlockID;
 					if(verbose)
-						System.out.println("recieved Block Num "+blockNum);
+						System.out.println("recieved Block Num "+dataBlockCounter);
 					byte[] data = new byte[512];
 			    	for(int i = 0, j = 4; i < data.length && j<receiveMsg.length; i++, j++)
 			    	{
@@ -240,8 +240,8 @@ public class Client
 			    	}
 			    	//send ACK 
 					byte[] b = {0, 4, 0, 0};
-					b[2]=(byte)((blockNum >>8) & 0xFF);
-					b[3]=(byte)(blockNum & 0xFF);
+					b[2]=(byte)(dataBlockCounter/256);
+					b[3]=(byte)(dataBlockCounter%256);
 					try {
 						message = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
 					} catch(UnknownHostException e) {
@@ -290,10 +290,10 @@ public class Client
 							}
 							
 							if (received){
-								tempIncomingBlockNum = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+								incomingBlockID = ((receiveMsg[2] <<8) + (receiveMsg[3] & 0xFF));
 								if(verbose)
-									System.out.println("Another dataPacket recieved from Server, Addressing issue, ACK#: "+tempIncomingBlockNum);
-								if(tempIncomingBlockNum <= blockNum){
+									System.out.println("Another dataPacket recieved from Server, Addressing issue, ACK#: "+incomingBlockID);
+								if(incomingBlockID <= dataBlockCounter){
 									try{ socket.send(message);} catch(IOException e) {e.printStackTrace();}
 									if(verbose)
 										System.out.println("Resending ACK");
@@ -301,9 +301,9 @@ public class Client
 							}
 						}while(received);
 					}
-				//incomingBlockNum <= BlockNum, is duplicate packet, ignore and re-send ACK,
+				//incomingdataBlockCounter <= dataBlockCounter, is duplicate packet, ignore and re-send ACK,
 				//return to top of loop. and wait for server response unless index has been set and the file is done transferring. 
-				}else if(tempIncomingBlockNum <= blockNum){
+				}else if(incomingBlockID <= dataBlockCounter){
 					//is a duplicate restart loop
 					if(verbose)						
 						System.out.println("Incoming Data block is a duplicate");
@@ -311,7 +311,7 @@ public class Client
 						socket.send(message);
 					}catch(IOException e){e.printStackTrace();} 
 					
-				//incomingBlockNum Higher than blockNum should never happen, print error and resend ack.	
+				//incomingdataBlockCounter Higher than dataBlockCounter should never happen, print error and resend ack.	
 				}else{
 					System.out.println("Unexpected Error Occured, Recieved Future Data Packet before ACK sent for present\n...Restarting Loop");
 				} 	

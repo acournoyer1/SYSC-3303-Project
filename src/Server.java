@@ -440,7 +440,7 @@ public class Server {
 						System.exit(1);
 					}
 					//parse two bytes into int.
-					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+					tempIncomingACK = ((receiveMsg[2] << 8) + (receiveMsg[3] & 0xFF));
 					
 					//duplicate/delayed ACK packet restart loop:
 					if (tempIncomingACK <= ACKcounter){
@@ -532,7 +532,7 @@ public class Server {
 						System.out.println("Strange error.. exiting");
 						System.exit(1);
 					}
-					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+					tempIncomingACK = ((receiveMsg[2] << 8) + (receiveMsg[3] & 0xFF));
 					if(tempIncomingACK == dataBlockCounter) {
 						ACKcounter = tempIncomingACK;
 						if(verbose){
@@ -560,8 +560,8 @@ public class Server {
 			//Adds the code for data block(03) followed by block number
 			byte[] msg = new byte[516];
 			msg[1] = 3;
-			msg[2] = (byte) ((byte)dataBlockCounter/256);
-			msg[3] = (byte) ((byte)dataBlockCounter%256);
+			msg[2] = (byte) (dataBlockCounter/256);
+			msg[3] = (byte) (dataBlockCounter%256);
 
 			//Adds the data to the byte array
 			for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)
