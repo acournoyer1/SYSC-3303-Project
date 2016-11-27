@@ -101,7 +101,16 @@ public class Server {
 				if (packet[i] == 0) {	
 					numberOfZeroes++;
 					//Makes sure filename and mode isn't missing
-					if (packet[i+1] == 0 || packet[i-1] == 0 || i == 2) return false;		
+					if (numberOfZeroes == 2 && packet[i+1] == 0){
+						for(int j=i; j<packet.length-2; j++) {
+							if (packet[j] != 0) {
+								return false;
+							}
+						}
+						break;
+					}
+					else if (packet[i+1] == 0 || packet[i-1] == 0 || i == 2) return false;
+					
 				} 
 			}
 			//File should not have more or less than 2 zeroes (potential corruption)
@@ -431,7 +440,7 @@ public class Server {
 						System.exit(1);
 					}
 					//parse two bytes into int.
-					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+					tempIncomingACK = ((receiveMsg[2] << 8) + (receiveMsg[3] & 0xFF));
 					
 					//duplicate/delayed ACK packet restart loop:
 					if (tempIncomingACK <= ACKcounter){
@@ -523,7 +532,7 @@ public class Server {
 						System.out.println("Strange error.. exiting");
 						System.exit(1);
 					}
-					tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+					tempIncomingACK = ((receiveMsg[2] << 8) + (receiveMsg[3] & 0xFF));
 					if(tempIncomingACK == dataBlockCounter) {
 						ACKcounter = tempIncomingACK;
 						if(verbose){
@@ -551,8 +560,8 @@ public class Server {
 			//Adds the code for data block(03) followed by block number
 			byte[] msg = new byte[516];
 			msg[1] = 3;
-			msg[2] = (byte) ((byte)dataBlockCounter/256);
-			msg[3] = (byte) ((byte)dataBlockCounter - dataBlockCounter/256);
+			msg[2] = (byte) (dataBlockCounter/256);
+			msg[3] = (byte) (dataBlockCounter%256);
 
 			//Adds the data to the byte array
 			for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)
@@ -621,7 +630,7 @@ public class Server {
 				socket.send(ack);
 			} catch (IOException e2) { e2.printStackTrace();}
 			//Sets up Error Detection Variables
-			int blockNum=0;
+			int dataBlockCounter=0;
 			int incomingBlockID=0;
 			boolean delayed = false; 
 			boolean lost = false; 
@@ -669,13 +678,15 @@ public class Server {
 				if (lost){
 					lost=false; 
 				} else { //run normally check for duplicates
-					incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
+					//incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
+					incomingBlockID = ((receivePacket.getData()[2]<<8) + (receivePacket.getData()[3] & 0xff));
 					if(verbose)
-						System.out.println("block id incoming:"+incomingBlockID+" and blockNUM: "+(blockNum+1));
-					if(incomingBlockID == blockNum+1){
-						blockNum=incomingBlockID;
+						System.out.println("block id incoming:"+incomingBlockID+" and dataBlockCounter: "+(dataBlockCounter+1));
+						if(incomingBlockID == 65408) System.exit(1);
+					if(incomingBlockID == dataBlockCounter+1){
+						dataBlockCounter=incomingBlockID;
 						if(verbose)
-							System.out.println("recieved Block Num "+blockNum);
+							System.out.println("recieved Block Num "+dataBlockCounter);
 						//Copies the data into a new array
 						byte[] data = new byte[512];
 						for(int i = 0, j = 4; i < data.length && j < receiveMsg.length; i++, j++)
@@ -690,8 +701,8 @@ public class Server {
 							}
 						}
 						//Creates and sends acknowledgement to the intermediate host
-						b[2]=(byte)((blockNum >> 8)& 0xFF);//moves all bits 8 to the right then masks all but the right most 8 bits, 
-						b[3]=(byte)(blockNum & 0xFF); // masks all but the right most 8 bits.
+						b[2]=(byte)(dataBlockCounter/256);//moves all bits 8 to the right then masks all but the right most 8 bits, 
+						b[3]=(byte)(dataBlockCounter%256); // masks all but the right most 8 bits.
 						try {
 							ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), hostPort);
 						} catch (UnknownHostException e2) {
@@ -740,8 +751,8 @@ public class Server {
 										System.out.println("Assumed that the Client Received the Final ACK after 10 seconds without a message");
 								} catch(IOException e){e.printStackTrace();}
 								if (received){
-									incomingBlockID = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
-									if(incomingBlockID <= blockNum){
+									incomingBlockID = (int)(((receivePacket.getData()[2] * 256) + receivePacket.getData()[3]) & 0xffff);
+									if(incomingBlockID <= dataBlockCounter){
 										try{ socket.send(ack);} catch(IOException e) {e.printStackTrace();}
 										if(verbose)
 											System.out.println("Resending ACK");
@@ -749,7 +760,7 @@ public class Server {
 								}
 							}while(received);
 						}//end of running properly, exits while. 	
-					}else if (incomingBlockID <= blockNum){
+					}else if (incomingBlockID <= dataBlockCounter){
 						if(verbose)
 							System.out.println("Incoming block is a duplicate");
 						try { 
