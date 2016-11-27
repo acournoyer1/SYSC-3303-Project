@@ -44,4 +44,12 @@ public class Converter {
 		
 		return s;
 	}
+	
+	/*
+	*   Converts byte array into a string for the error message
+	*/
+	public static String convertErrorMessage(byte[] message)
+	{
+		return new String(message);
+	}
 }
