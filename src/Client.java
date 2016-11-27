@@ -191,16 +191,12 @@ public class Client
 			} //not lost but has an error
 			else if((receivePacket.getData()[3] == 1 || receivePacket.getData()[3] == 2) && receivePacket.getData()[1] == 5)
 			{
-				//Check for block received is error packet:
-				//TODO: code not necessary to run until known that getData()[1]==5;
-				String code="";
-				switch(receivePacket.getData()[3]){
-					case 1:
-						code = "File not found";
-						break;
-					case 2:
-						code = "Access Violation";
-						break;
+				//Verify that the TID of the received packet is correct
+				if(receivePacket.getPort() != hostTID){
+					//If the ports do not match, send an errorpacket to the received packet
+					createSendError(new Byte("5"), receivePacket, socket,"Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
+					//"Continue" by sending the thread back to the beginning of the while loop
+					continue;
 				}
 				
 				System.out.println("Error packet received. Code: 050" + receivePacket.getData()[3] + " " + code + ". Stopping request.");
@@ -218,6 +214,13 @@ public class Client
 			} 
 			//Else No Errors in packet, check for duplicate and run normally. 
 			else {
+				//Verify that the TID of the received packet is correct
+				if(receivePacket.getPort() != hostTID){
+					//If the ports do not match, send an errorpacket to the received packet
+					createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
+					//"Continue" by sending the thread back to the beginning of the while loop
+					continue;
+				}
 				//TODO: clean this up a bit remove extraneous conditions 
 				//Error Handling Iteration 3: 
 				//parse bytes into int:
@@ -290,6 +293,13 @@ public class Client
 							}
 							
 							if (received){
+								//Verify that the TID of the received packet is correct
+								if(receivePacket.getPort() != hostTID){
+									//If the ports do not match, send an errorpacket to the received packet
+									createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
+									//"Continue" by sending the thread back to the beginning of the while loop
+									continue;
+								}
 								incomingBlockID = ((receiveMsg[2] <<8) + (receiveMsg[3] & 0xFF));
 								if(verbose)
 									System.out.println("Another dataPacket recieved from Server, Addressing issue, ACK#: "+incomingBlockID);
@@ -463,25 +473,24 @@ public class Client
 					e.printStackTrace();
 				}
 			}//Check for File related errors
-			else if((receivePacket.getData()[3] == 2 || receivePacket.getData()[3] == 3 || receivePacket.getData()[3] == 6) && receivePacket.getData()[1] == 5 ||receivePacket.getData()[1]==5){
-				String code = "";
-				switch(receiveMsg[3]){
-				case 2:
-					code = "Access Violation";
-					break;
-				case 3:
-					code = "Disk full or allocation exceeded";
-					break;
-				case 6:
-					code = "File already exists";
-					break;
+			else if((receivePacket.getData()[3] == 2 || receivePacket.getData()[3] == 3 || receivePacket.getData()[3] == 6) && receivePacket.//Verify that the TID of the received packet is correct
+				if(receivePacket.getPort() != hostTID){
+					//If the ports do not match, send an errorpacket to the received packet
+					createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
+					//"Continue" by sending the thread back to the beginning of the while loop
+					continue;
 				}
-				
-				System.out.println("Error packet received. Code: 050" + receivePacket.getData()[3] + " " + code + ". Stopping request.");
+				System.out.println("Error packet received. " + Converter.convertErrorMessage(Arrays.copyOfRange(receivePacket.getData(), 4, receivePacket.getData().length)) + ". \nStopping request.");
 				System.exit(0);
 			}//run and parse for duplicate, delayed, and lost errors 
 			else {
-				
+				//Verify that the TID of the received packet is correct
+				if(receivePacket.getPort() != hostTID){
+					//If the ports do not match, send an errorpacket to the received packet
+					createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
+					//"Continue" by sending the thread back to the beginning of the while loop
+					continue;
+				}
 				tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
 				if(verbose){
 					System.out.println("The value coming in as an ack number is"+tempIncomingACK + " while dataBlockCounter : "+dataBlockCounter);
@@ -560,6 +569,13 @@ public class Client
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+			}
+			//Verify that the TID of the received packet is correct
+			if(receivePacket.getPort() != hostTID){
+				//If the ports do not match, send an errorpacket to the received packet
+				createSendError(new Byte("5"), receivePacket, socket,"Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
+				//"Continue" by sending the thread back to the beginning of the while loop
+				continue;
 			}
 			if (ACKlost){//re-send packet
 				try{ 
