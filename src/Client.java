@@ -19,7 +19,8 @@ public class Client extends Thread
 	private static final int PORT_NUMBER = 23;
 	private DatagramSocket socket;
 	private File directory;
-
+	private InetAddress hostIp;		//IP address of the new host (localHost by default)
+	private InetAddress defaultIp;	//IP address of the default host (localHost by default)
 	/*
 	 * Constructor for objects of class Client
 	 */
@@ -29,6 +30,10 @@ public class Client extends Thread
 		try
 		{
 			socket = new DatagramSocket();	//Creates socket that sends/receives DataPackets
+			
+			defaultIp = InetAddress.getLocalHost();		//default host IP Address
+			hostIp = InetAddress.getLocalHost();	
+			
 		}
 		catch(IOException e)
 		{
@@ -42,6 +47,8 @@ public class Client extends Thread
 	 */
 	private synchronized DatagramPacket buildRequest(String mode, String filename, ActionType action)
 	{
+		
+		
 		//Determines if request is a read, write or invalid
 		byte[] request = new byte[100];
 		request[0] = 0;
@@ -73,15 +80,20 @@ public class Client extends Thread
 		request[i++] = 0;
 
 		//Creates the DatagramPacket from the byte array and sends it back
-		try {					
-			return new DatagramPacket(request, request.length, InetAddress.getLocalHost(), PORT_NUMBER);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			return null;
+		
+		
+		
+		if(!hostIp.equals(defaultIp)){
+			
+			return new DatagramPacket(request, request.length, hostIp, PORT_NUMBER);
+		}else{
+		
+		return new DatagramPacket(request, request.length, defaultIp, PORT_NUMBER);
 		}
-
 	}
-
+	
+	
+	
 	/*
 	 *	Creates a DatagramPacket that contains the data requested
 	 */
@@ -339,7 +351,23 @@ public class Client extends Thread
 			return null;
 		}
 	}
-
+	
+	
+	/*
+	 * Allows a user to change the hostIp. Takes a string input i.e "127.0.0.1"
+	 */
+	public void changeIp(String ip){		
+		
+		try {
+			hostIp = InetAddress.getByName(ip);		//creates a new InetAdress object with the provided IP address
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		
+	}
 	@Override 
 	public void run()
 	{
