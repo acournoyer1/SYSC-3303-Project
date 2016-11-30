@@ -190,7 +190,6 @@ public class Server {
 	 * @param socket to send off of from current thread
 	 */
 	private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket, String message){
-		
 		byte[] b = message.getBytes() != null ? new byte[4 + message.getBytes().length + 1] : new byte[4];
 		b[0] = 0;
 		b[1] = 5;

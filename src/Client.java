@@ -203,9 +203,9 @@ public class Client
 			receiveMsg = new byte[516];
 			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 			//delayed and lost handling
-			if(!checkIfValidPacket(receiveMsg)){
+			/*if(!checkIfValidPacket(receiveMsg)){
 				System.out.println("Invalid packet format: 0504 - Invalid packet. ");
-			}
+			}*/
 			
 			try {
 				socket.setSoTimeout(2000);  //set timeout 
@@ -253,7 +253,7 @@ public class Client
 			//Else No Errors in packet, check for duplicate and run normally. 
 			else {
 				//Verify that the TID of the received packet is correct
-				if(receivePacket.getPort() != hostTID){
+				if(hostTID instanceof Integer && receivePacket.getPort() != hostTID){
 					//If the ports do not match, send an errorpacket to the received packet
 					createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
 					//"Continue" by sending the thread back to the beginning of the while loop
@@ -332,7 +332,7 @@ public class Client
 							
 							if (received){
 								//Verify that the TID of the received packet is correct
-								if(receivePacket.getPort() != hostTID){
+								if(hostTID instanceof Integer && receivePacket.getPort() != hostTID){
 									//If the ports do not match, send an errorpacket to the received packet
 									createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
 									//"Continue" by sending the thread back to the beginning of the while loop
@@ -471,7 +471,8 @@ public class Client
 			e1.printStackTrace();
 		}
 		while(available > 0) {		
-			receiveMsg = new byte[4];
+			//TODO: Find a better way to better initalize the array size of receive message
+			receiveMsg = new byte[100];
 			//TODO: condense code and place in method for next iteration. 
 			//Receives response from server
 			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);	
@@ -493,6 +494,8 @@ public class Client
 					if(verbose)
 						System.out.println("Waiting for response.");
 					socket.receive(receivePacket);
+					if(!(hostTID instanceof Integer))
+						hostTID = receivePacket.getPort();
 				} catch (SocketTimeoutException ste){
 					if(verbose)
 						System.out.println("ACK Packet is declared lost\nResending Data Packet");
@@ -513,18 +516,19 @@ public class Client
 			}//Check for File related errors
 			else if((receivePacket.getData()[3] == 2 || receivePacket.getData()[3] == 3 || receivePacket.getData()[3] == 6) && receivePacket.getData()[1] == 5){
 				//Verify that the TID of the received packet is correct
-				if(receivePacket.getPort() != hostTID){
+				if(hostTID instanceof Integer && receivePacket.getPort() != hostTID){
 					//If the ports do not match, send an errorpacket to the received packet
 					createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
 					//"Continue" by sending the thread back to the beginning of the while loop
 					continue;
 				}
-				System.out.println("Error packet received. " + Converter.convertErrorMessage(Arrays.copyOfRange(receivePacket.getData(), 4, receivePacket.getData().length)) + ". \nStopping request.");
+				System.out.println("Error packet received. " + Converter.convertErrorMessage(receivePacket.getData()) + ". \nStopping request.");
 				System.exit(0);
 			}//run and parse for duplicate, delayed, and lost errors 
 			else {
 				//Verify that the TID of the received packet is correct
-				if(receivePacket.getPort() != hostTID){
+				if(hostTID instanceof Integer && receivePacket.getPort() != hostTID){
+					System.out.println("test");
 					//If the ports do not match, send an errorpacket to the received packet
 					createSendError(new Byte("5"), receivePacket, socket, "Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
 					//"Continue" by sending the thread back to the beginning of the while loop
@@ -610,7 +614,7 @@ public class Client
 				}
 			}
 			//Verify that the TID of the received packet is correct
-			if(receivePacket.getPort() != hostTID){
+			if(hostTID instanceof Integer && receivePacket.getPort() != hostTID){
 				//If the ports do not match, send an errorpacket to the received packet
 				createSendError(new Byte("5"), receivePacket, socket,"Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
 				//"Continue" by sending the thread back to the beginning of the while loop

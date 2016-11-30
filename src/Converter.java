@@ -1,3 +1,6 @@
+import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
+
 /**
  * Creates a converter that turn a byte array into a string which it returns
  * 
@@ -50,6 +53,14 @@ public class Converter {
 	*/
 	public static String convertErrorMessage(byte[] message)
 	{
-		return new String(message);
+		String decodedDataUsingUTF8 = null;
+		try {
+			byte[] c = Arrays.copyOfRange(message, 4, message.length);
+			decodedDataUsingUTF8 = new String(c, "UTF-8");
+		    System.out.println(decodedDataUsingUTF8);
+		} catch (UnsupportedEncodingException e1) {
+			e1.printStackTrace();
+		}
+		return decodedDataUsingUTF8;
 	}
 }
