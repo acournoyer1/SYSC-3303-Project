@@ -117,14 +117,12 @@ public class Client
 		
 		try {			
 			DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
-			try {
-				socket.send(ack);
-			}catch (IOException IOE){
-				IOE.printStackTrace();
-				System.exit(1);
-			}
+			socket.send(ack);
 		} catch (UnknownHostException e){
 			e.printStackTrace();
+			System.exit(1);
+		} catch (IOException IOE){
+			IOE.printStackTrace();
 			System.exit(1);
 		}
 	}
@@ -213,7 +211,9 @@ public class Client
 			} catch (SocketTimeoutException ste){
 				System.out.println("Socket timeout file delayed or lost");
 				delayed = true;
-			}catch (IOException e) {e.printStackTrace();System.exit(1);}
+			}catch (IOException e) {
+				e.printStackTrace();System.exit(1);
+			}
 			if (delayed){
 				try {
 					socket.setSoTimeout(5000);  //set timeout 
@@ -222,7 +222,9 @@ public class Client
 					System.out.println("Socket timeout file declared lost\nAsking to be sent again.");
 					lost = true;
 					delayed = false;///if delayed keep that info till the end of the loop
-				}catch (IOException e) { e.printStackTrace();}
+				}catch (IOException e) { 
+					e.printStackTrace();
+				}
 			}
 			//Start of Run after packet Received. 
 			if (lost){
@@ -240,13 +242,10 @@ public class Client
 				}
 				try {
 					fos.close();
+					Files.delete(Paths.get(directory.getAbsolutePath() + "\\" + filename));
+
 				} catch (IOException e1) {
 					e1.printStackTrace();
-				}
-				try {
-					Files.delete(Paths.get(directory.getAbsolutePath() + "\\" + filename));
-				} catch (IOException e) {
-					e.printStackTrace();
 				}
 				System.exit(0);
 			} 

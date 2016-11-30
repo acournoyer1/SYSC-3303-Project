@@ -1,5 +1,4 @@
 import java.awt.BorderLayout;
-import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -78,6 +77,9 @@ public class ErrorSimulator {
     	host.setUp();
     }
 	
+	/**
+	 * Creates a new error simulator instance
+	 */
 	public void setUp()
 	{
 		new HostSetup(this);
@@ -259,6 +261,13 @@ public class ErrorSimulator {
 		}
 	}
 	
+	/**
+	 * Creates a thread that will delay the datagram being sent to
+	 * simulate a delayed packet as well as lost packets
+	 * 
+	 * @author Team 11
+	 *
+	 */
 	private class DelayThread extends Thread 
 	{
 		private DatagramSocket socket;
@@ -284,6 +293,12 @@ public class ErrorSimulator {
 		}
 	}
 	
+	/**
+	 * Creates a thread that will simulate a invalid TID error.
+	 * 
+	 * @author Team 11
+	 *
+	 */
 	private class WrongTIDThread extends Thread
 	{
 		private DatagramSocket socket;
@@ -313,6 +328,13 @@ public class ErrorSimulator {
 		}
 	}
 	
+	/**
+	 * Creates the base GUI that the host information will be displayed 
+	 * within. 
+	 * 
+	 * @author Team 11
+	 *
+	 */
 	@SuppressWarnings("serial")
 	private class HostSetup extends JDialog
 	{
@@ -384,6 +406,13 @@ public class ErrorSimulator {
 		}
 	}
 	
+	/**
+	 * Creates the GUI panel in which the user can choose which error
+	 * scenario they wish to simulate
+	 * 
+	 * @author Team 11
+	 *
+	 */
 	@SuppressWarnings("serial")
 	private class ErrorPane extends JPanel
 	{
@@ -432,6 +461,7 @@ public class ErrorSimulator {
 			
 			errorType.addItemListener(new ItemListener()
 			{
+				@SuppressWarnings({ "unchecked", "static-access" })
 				@Override
 				public void itemStateChanged(ItemEvent e) 
 				{
@@ -459,6 +489,7 @@ public class ErrorSimulator {
 			});
 			packetType.addItemListener(new ItemListener()
 			{
+				@SuppressWarnings({ "unchecked", "static-access" })
 				@Override
 				public void itemStateChanged(ItemEvent e) 
 				{
@@ -568,6 +599,7 @@ public class ErrorSimulator {
 			this.field = f;
 		}
 		
+		@SuppressWarnings("unused")
 		public Field getField()
 		{
 			return field;
@@ -575,16 +607,25 @@ public class ErrorSimulator {
 		
 	}
 	
+	/**
+	 * 	Defines all of the types of errors that are available
+	 */
 	private enum ErrorType
 	{
 		LOST, DELAYED, DUPLICATED, CORRUPTED, WRONG_TID
 	}
 	
+	/**
+	 * Defines the type of packet that a error is being generated in
+	 */
 	private enum PacketType
 	{
 		DATA, ACK, REQUEST
 	}
 	
+	/**
+	 *	Extra fields to change the type of error
+	 */
 	private enum Field
 	{
 		OPCODE, BLOCKNUMBER, DATA, FILENAME, DELAY_TIME

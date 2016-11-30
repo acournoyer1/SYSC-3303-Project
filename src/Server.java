@@ -177,6 +177,11 @@ public class Server {
 		t.start();
 	}
 	
+	/**
+	 * Removes the given thread
+	 * 
+	 * @param thread that will be removed
+	 */
 	private void removeThread(Thread t)
 	{
 		threads.remove(t);
@@ -220,6 +225,14 @@ public class Server {
 		}
 	}
 	
+	/**
+	 * Creates a thread that will control the action that the server will
+	 * do. It checks for errors, then if no errors are detected creates the thread,
+	 * otherwise it sends an error packet.
+	 * 
+	 * @author Team 11
+	 *
+	 */
 	private class ControlThread extends Thread
 	{
 		private DatagramPacket packet;
@@ -645,11 +658,6 @@ public class Server {
 				e.printStackTrace();
 			}
 		}
-		
-		/*public String getFilename()
-		{
-			return filename;
-		}*/
 
 		/*
 		 *   Sends request to intermediate host then writes to the file  
@@ -951,6 +959,13 @@ public class Server {
 				}
 			});
 		}
+		
+		/**
+		 * Creates a button that allows that user to stop the server 
+		 * 
+		 * @author Team 11
+		 *
+		 */
 		private class ShutDown{
 			private JFrame frame;
 			
