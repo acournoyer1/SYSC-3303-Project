@@ -284,9 +284,13 @@ public class Client
 					b[3]=(byte)(dataBlockCounter%256);
 					try {
 						message = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+						socket.send(message);
 					} catch(UnknownHostException e) {
 						e.printStackTrace();
 						System.exit(1);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
 					try {
 						socket.send(message);
