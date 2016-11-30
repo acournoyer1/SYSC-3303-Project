@@ -60,8 +60,10 @@ public class Server {
 		while(true)
 		{
 			//Waits to receive DatagramPacket from intermediate host
-			if(verbose)
+			if(verbose) {
 				System.out.println("Server waiting...");
+				System.out.println();
+			}
 			byte[] msg = new byte[100];
 			DatagramPacket receivedPacket = new DatagramPacket(msg, msg.length);
 			while(!shutdown){
@@ -698,13 +700,17 @@ public class Server {
 				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 				try {
 					socket.setSoTimeout(2000);
-					if(verbose)
+					if(verbose) {
 						System.out.println("Waiting for data. . .");
+						System.out.println();
+					}
 					socket.receive(receivePacket);
 				}catch (SocketTimeoutException ste){
 					delayed=true; 
-					if(verbose)
+					if(verbose) {
 						System.out.println("Data Delayed, waiting...");
+						System.out.println();
+					}
 				} catch (IOException e) {e.printStackTrace();}
 				
 				if(delayed){
@@ -735,12 +741,12 @@ public class Server {
 					//incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
 					incomingBlockID = ((receivePacket.getData()[2]<<8) + (receivePacket.getData()[3] & 0xff));
 					if(verbose)
-						System.out.println("block id incoming:"+incomingBlockID+" and dataBlockCounter: "+(dataBlockCounter+1));
+						System.out.println("Block id incoming:"+incomingBlockID+" and dataBlockCounter: "+(dataBlockCounter+1));
 						if(incomingBlockID == 65408) System.exit(1);
 					if(incomingBlockID == dataBlockCounter+1){
 						dataBlockCounter=incomingBlockID;
 						if(verbose)
-							System.out.println("recieved Block Num "+dataBlockCounter);
+							System.out.println("Received Block Num "+dataBlockCounter);
 						//Copies the data into a new array
 						byte[] data = new byte[512];
 						for(int i = 0, j = 4; i < data.length && j < receiveMsg.length; i++, j++)
