@@ -534,7 +534,6 @@ public class Client
 		if(emptyPacket){
 			data = new byte[512];
 			message = buildData(data, ++dataBlockCounter, receivePacket.getPort());
-			
 		}
 		//TODO: add to method reduce "loose" code;  
 		//Receive Final ACK to make sure that the thing sent:
@@ -545,7 +544,7 @@ public class Client
 			ACKdelayed=false; ACKlost=false;
 			
 			receiveMsg = new byte[4];
-			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+			receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 			try {
 				socket.setSoTimeout(2000);
 				socket.receive(receivePacket);
