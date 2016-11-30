@@ -62,8 +62,8 @@ public class Server {
 			//Waits to receive DatagramPacket from intermediate host
 			if(verbose)
 				System.out.println("Server waiting...");
-			byte[] msg = new byte[100];
-			DatagramPacket receivedPacket = new DatagramPacket(msg, msg.length);
+			byte[] message = new byte[100];
+			DatagramPacket receivedPacket = new DatagramPacket(message, message.length);
 			while(!shutdown){
 				try {
 					receiveSocket.setSoTimeout(1000);
@@ -77,7 +77,7 @@ public class Server {
 				}
 			}
 			if(verbose)
-				System.out.println("Request received from Host: " + Converter.convertMessage(msg));
+				System.out.println("Request received from Host: " + Converter.convertMessage(message));
 			
 			addThread(new ControlThread(receivedPacket));
 		}
@@ -194,9 +194,9 @@ public class Server {
 		@Override
 		public void run()
 		{
-			byte[] msg = packet.getData();
+			byte[] message = packet.getData();
 			/*//Checks if request is valid (read or write)
-			if(!(msg[0] == 0 && (msg[1] == 1 || msg[1] == 2)))
+			if(!(message[0] == 0 && (message[1] == 1 || message[1] == 2)))
 			{
 				System.out.println("Request is invalid.");
 				System.exit(1);
@@ -204,16 +204,16 @@ public class Server {
 
 			int zeroCount = 0;
 			int count = 0;
-			for(int i = 2; i < msg.length; i++)
+			for(int i = 2; i < message.length; i++)
 			{
 				if(zeroCount < 2)
 				{
-					if(msg[i] == 0 && count == 0)
+					if(message[i] == 0 && count == 0)
 					{
 						System.out.println("Request is invalid.");
 						System.exit(1);
 					}
-					else if(msg[i] == 0)
+					else if(message[i] == 0)
 					{
 						count = 0;
 						zeroCount++;
@@ -225,7 +225,7 @@ public class Server {
 				}
 				else
 				{
-					if(msg[i] != 0)
+					if(message[i] != 0)
 					{
 						System.out.println("Request is invalid.");
 						System.exit(1);
@@ -233,7 +233,7 @@ public class Server {
 				}
 			}*/
 
-			if(!checkIfValidPacket(msg)){
+			if(!checkIfValidPacket(message)){
 				System.out.println("Invalid packet format: 0504 - Invalid packet. ");
 				if(verbose)
 					System.out.println("Sending error packet . . .");
@@ -241,19 +241,19 @@ public class Server {
 			}
 			//Extracts the filename
 			int index = -1;
-			for(int i = 2; i < msg.length; i++)
+			for(int i = 2; i < message.length; i++)
 			{
-				if(msg[i] == 0)
+				if(message[i] == 0)
 				{
 					index = i;
-					i = msg.length;
+					i = message.length;
 				}
 			}
 			byte[] b = new byte[index - 2];
 			int j = 2;
 			for(int i = 0; i < b.length; i++, j++)
 			{
-				b[i] = msg[j];
+				b[i] = message[j];
 			}
 			//Turns filename that is a byte array into a string
 			String filename = new String(b);
@@ -263,7 +263,7 @@ public class Server {
 			
 			//If Else determine Read request or Write request
 			//Creates new read thread with filename
-			if(msg[1] == 1)
+			if(message[1] == 1)
 			{
 				//Check if file exists
 				if(!f.exists())
@@ -374,7 +374,7 @@ public class Server {
 			} catch (FileNotFoundException e2) {
 				e2.printStackTrace();
 			}
-			byte[] receiveMsg = new byte[4];
+			byte[] receiveMessage = new byte[4];
 			int available = 0;
 			
 			//Error Verification Variables 
@@ -389,9 +389,9 @@ public class Server {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			DatagramPacket msg = buildData(data, ++dataBlockCounter, hostPort);
+			DatagramPacket message = buildData(data, ++dataBlockCounter, hostPort);
 			try {
-				socket.send(msg);
+				socket.send(message);
 				if(verbose)
 					System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
 			} catch (IOException e) {
@@ -402,14 +402,14 @@ public class Server {
 			} catch (IOException e2) {
 				e2.printStackTrace();
 			}
-			receiveMsg = new byte[4];
-			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+			receiveMessage = new byte[4];
+			DatagramPacket receivePacket = new DatagramPacket(receiveMessage, receiveMessage.length);
 			
 			//Continually reads data from the file until no more data is available
 			while(available > 0) {
 				ACKdelay = false;
 				ACKlost = false;
-				receiveMsg = new byte[4];
+				receiveMessage = new byte[4];
 				try {
 					socket.setSoTimeout(2000);
 					socket.receive(receivePacket);
@@ -431,26 +431,26 @@ public class Server {
 				}
 				if (ACKlost){//re-send packet
 					try{ 
-						socket.send(msg);
+						socket.send(message);
 						ACKlost=false;
 					} catch(IOException e){	e.printStackTrace();}
 				} else {
 					if(verbose)
-						System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
-					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
+						System.out.println("Response received from Client: " + Arrays.toString(receiveMessage) + "\n");
+					if (receiveMessage[0]!=0 || receiveMessage[1]!=4) {
 						System.out.println("Strange error.. exiting");
 						System.exit(1);
 					}
 					//parse two bytes into int.
-					tempIncomingACK = ((receiveMsg[2] << 8) + (receiveMsg[3] & 0xFF));
+					tempIncomingACK = ((receiveMessage[2] << 8) + (receiveMessage[3] & 0xFF));
 					
 					//duplicate/delayed ACK packet restart loop:
 					if (tempIncomingACK <= ACKcounter){
-						//msg should contain previous DatagramPacket to send
+						//message should contain previous DatagramPacket to send
 						if(verbose)
 							System.out.println("Received old ACK statement, delay and/or duplication Error detected\nResending Packet");
 						try{ 
-							socket.send(msg);
+							socket.send(message);
 						} catch(IOException e){
 							e.printStackTrace();
 						}
@@ -463,11 +463,11 @@ public class Server {
 						} catch (IOException e1) {
 							e1.printStackTrace();
 						}
-						msg = buildData(data, ++dataBlockCounter, hostPort);
+						message = buildData(data, ++dataBlockCounter, hostPort);
 						try {
 							if(verbose)
 								System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
-							socket.send(msg);
+							socket.send(message);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
@@ -484,7 +484,7 @@ public class Server {
 						if(verbose)
 							System.out.println("Unexpected Error Occurred, ACK for future packet Recieved");
 						try{ 
-							socket.send(msg);
+							socket.send(message);
 						} catch(IOException e){
 							e.printStackTrace();
 						}
@@ -493,9 +493,9 @@ public class Server {
 			}//END Loop
 			if(emptyPacket){
 				data = new byte[512];
-				msg = buildData(data, ++dataBlockCounter, receivePacket.getPort());
+				message = buildData(data, ++dataBlockCounter, receivePacket.getPort());
 				try {
-					socket.send(msg);
+					socket.send(message);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -507,7 +507,7 @@ public class Server {
 				
 				ACKdelay=false; ACKlost=false;
 				
-				receiveMsg = new byte[4];
+				receiveMessage = new byte[4];
 				try {
 					socket.setSoTimeout(2000);
 					socket.receive(receivePacket);
@@ -533,26 +533,26 @@ public class Server {
 				}
 				if (ACKlost){//re-send packet
 					try{ 
-						socket.send(msg);
+						socket.send(message);
 						ACKlost=false;
 					} catch(IOException e){
 						e.printStackTrace();
 					}
 				}else {
-					if (receiveMsg[0]!=0 || receiveMsg[1]!=4) {
+					if (receiveMessage[0]!=0 || receiveMessage[1]!=4) {
 						System.out.println("Strange error.. exiting");
 						System.exit(1);
 					}
-					tempIncomingACK = ((receiveMsg[2] << 8) + (receiveMsg[3] & 0xFF));
+					tempIncomingACK = ((receiveMessage[2] << 8) + (receiveMessage[3] & 0xFF));
 					if(tempIncomingACK == dataBlockCounter) {
 						ACKcounter = tempIncomingACK;
 						if(verbose){
 							System.out.println("ACK recieved ");
-							System.out.println("Response received from Client: " + Arrays.toString(receiveMsg) + "\n");
+							System.out.println("Response received from Client: " + Arrays.toString(receiveMessage) + "\n");
 						}
 						break;
 					}else {
-						try{ socket.send(msg);} catch(IOException e){ e.printStackTrace();}
+						try{ socket.send(message);} catch(IOException e){ e.printStackTrace();}
 					}
 				}
 			}//END loop 
@@ -569,21 +569,21 @@ public class Server {
 		private synchronized DatagramPacket buildData(byte[] data, int dataBlockCounter, int portNumber)
 		{
 			//Adds the code for data block(03) followed by block number
-			byte[] msg = new byte[516];
-			msg[1] = 3;
-			msg[2] = (byte) (dataBlockCounter/256);
-			msg[3] = (byte) (dataBlockCounter%256);
+			byte[] message = new byte[516];
+			message[1] = 3;
+			message[2] = (byte) (dataBlockCounter/256);
+			message[3] = (byte) (dataBlockCounter%256);
 
 			//Adds the data to the byte array
-			for(int j = 0, k = 4; j < data.length && k < msg.length; j++, k++)
+			for(int j = 0, k = 4; j < data.length && k < message.length; j++, k++)
 			{
-				msg[k] = data[j];
+				message[k] = data[j];
 			}
 
 			//Creates DatagramPacket and returns it
 			DatagramPacket send = null;
 			try {
-				send = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), portNumber);
+				send = new DatagramPacket(message, message.length, InetAddress.getLocalHost(), portNumber);
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}
@@ -647,7 +647,7 @@ public class Server {
 			boolean lost = false; 
 			//Sets up fileOuputStream
 			int index = -1;
-			byte[] receiveMsg;
+			byte[] receiveMessage;
 			FileOutputStream fos = null;
 			try {
 				fos = new FileOutputStream(new File(directory.getAbsolutePath() + "\\" + filename));
@@ -661,8 +661,8 @@ public class Server {
 				//resets the packet duplicate checker;
 				
 				//Receives data from intermediate host
-				receiveMsg = new byte[516];
-				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+				receiveMessage = new byte[516];
+				DatagramPacket receivePacket = new DatagramPacket(receiveMessage, receiveMessage.length);
 				try {
 					socket.setSoTimeout(2000);
 					if(verbose)
@@ -700,9 +700,9 @@ public class Server {
 							System.out.println("recieved Block Num "+dataBlockCounter);
 						//Copies the data into a new array
 						byte[] data = new byte[512];
-						for(int i = 0, j = 4; i < data.length && j < receiveMsg.length; i++, j++)
+						for(int i = 0, j = 4; i < data.length && j < receiveMessage.length; i++, j++)
 						{
-							data[i] = receiveMsg[j];
+							data[i] = receiveMessage[j];
 						}
 						//TODO: combine for loops, why can't if statement follow statement in first for
 						for(int k = 0; k < data.length; k++) {
