@@ -399,7 +399,7 @@ public class Server {
 		/*
 		 *   Sends data back to the client and waits for an ack  
 		 */
-		private synchronized void sendReceive() 
+		private synchronized void sendReceive() throws IOException
 		{
 			//Reads from the file	
 			byte[] data = new byte[512];
@@ -427,18 +427,11 @@ public class Server {
 				e1.printStackTrace();
 			}
 			DatagramPacket message = buildData(data, ++dataBlockCounter, hostPort);
-			try {
-				socket.send(message);
-				if(verbose)
-					System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			try {
-				available=is.available();
-			} catch (IOException e2) {
-				e2.printStackTrace();
-			}
+			socket.send(message);
+			if(verbose)
+				System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
+			
+			available=is.available();
 			//Continually reads data from the file until no more data is available
 			while(available > 0 || ACKcounter < dataBlockCounter || emptyPacketSend) {
 				ACKdelay = false;
@@ -453,7 +446,7 @@ public class Server {
 					if(verbose)
 						System.out.println("Ack is delayed for block number "+(dataBlockCounter));
 					ACKdelay = true;
-				} catch (IOException e) { e.printStackTrace();}
+				} 
 				if (ACKdelay){
 					try {
 						socket.setSoTimeout(4000);
@@ -463,13 +456,11 @@ public class Server {
 							System.out.println("Ack is considered lost.. Resending packet");
 						ACKdelay = false;
 						ACKlost = true;
-					} catch (IOException e) {e.printStackTrace();}
+					}
 				}
 				if (ACKlost){//re-send packet
-					try{ 
-						socket.send(message);
-						ACKlost=false;
-					} catch(IOException e){	e.printStackTrace();}
+					socket.send(message);
+					ACKlost=false;
 				} else {
 					//Verify that the TID of the received packet is correct
 					if(receivePacket.getPort() != hostPort){
@@ -488,39 +479,29 @@ public class Server {
 					//duplicate/delayed ACK packet restart loop:
 					if (tempIncomingACK <= ACKcounter){
 						//msg should contain previous DatagramPacket to send
-						if(verbose)
+						if(verbose){
 							System.out.println("Received old ACK statement, delay and/or duplication Error detected\nResending Packet");
-						try{ 
-							socket.send(message);
-						} catch(IOException e){
-							e.printStackTrace();
 						}
+						socket.send(message);
+						 
 					} //expected result ACK corresponds to last block sent
 					else if(tempIncomingACK == dataBlockCounter){
 						ACKcounter = tempIncomingACK;
 						data = new byte[512];
-						try {
-							is.read(data);
-						} catch (IOException e1) {
-							e1.printStackTrace();
-						}
+						is.read(data);
+						
 						if (available>0 || emptyPacketSend)
 							message = buildData(data, ++dataBlockCounter, hostPort);
-						try {
-							if(verbose){
-								System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
-								System.out.println("Destination IP: " + message.getAddress());
-							}	
-							socket.send(message);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
+						
+						if(verbose){
+							System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
+							System.out.println("Destination IP: " + message.getAddress());
+						}	
+						socket.send(message);
 						if (available<=0 && emptyPacketSend) emptyPacketSend=false;
-						try {
-							available = is.available();
-						} catch (IOException e1) {
-							e1.printStackTrace();
-						}
+						
+						available = is.available();
+						
 						if(available == 512 && !emptyPacketSend) emptyPacketSend=true;
 						if(verbose)
 							System.out.println("Bytes left in file "+available);
@@ -528,20 +509,13 @@ public class Server {
 					else{
 						if(verbose)
 							System.out.println("Unexpected Error Occurred, ACK for future packet Recieved");
-						try{ 
-							socket.send(message);
-						} catch(IOException e){
-							e.printStackTrace();
-						}
+						
+						socket.send(message);
 					}
 				}		
 			}//END Loop
 			//Receive Final ACK to make sure that the thing sent:
-			try {
-				is.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			is.close();
 		}
 
 		/*
@@ -574,7 +548,11 @@ public class Server {
 		@Override
 		public void run()
 		{
-			sendReceive();
+			try {
+				sendReceive();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			removeThread(this);
 		}
 	}
@@ -605,7 +583,7 @@ public class Server {
 		/*
 		 *   Sends request to intermediate host then writes to the file  
 		 */
-		private synchronized void sendReceive()
+		private synchronized void sendReceive() throws IOException
 		{
 			//sends first ACK to confirm that the Client can continue the file transfer. 
 			byte[] b = {0, 4, 0, 0};
@@ -613,9 +591,9 @@ public class Server {
 			try {
 				ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), hostPort);
 			} catch (UnknownHostException e2) {	e2.printStackTrace();}
-			try {
-				socket.send(ack);
-			} catch (IOException e2) { e2.printStackTrace();}
+			
+			socket.send(ack);
+			
 			//Sets up Error Detection Variables
 			int dataBlockCounter=0;
 			int incomingBlockID=0;
@@ -652,7 +630,7 @@ public class Server {
 						System.out.println("Data Delayed, waiting...");
 						System.out.println();
 					}
-				} catch (IOException e) {e.printStackTrace();}
+				}
 				
 				if(delayed){
 					try {
@@ -663,7 +641,7 @@ public class Server {
 						delayed= false;
 						if(verbose)
 							System.out.println("Packet declared LOST, Resending Packet");
-					} catch (IOException e) {e.printStackTrace();}
+					} 
 				}
 				
 				if (lost){
@@ -710,35 +688,19 @@ public class Server {
 						} catch (UnknownHostException e2) {
 							e2.printStackTrace();
 						}
-						try {
-							socket.send(ack);
-						}catch (IOException IOE){
-							IOE.printStackTrace();
-							System.exit(1);
-						}
 						
+						socket.send(ack);
 						//Writes data to the file
 						if(index == -1){
-							try {
-								fos.write(data);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-
+							fos.write(data);
 							//Writes the last bit of data to the file
 						} else{
 							if(verbose)
 								System.out.println("Entered final loop, index is not -1 anymore.");
-							try {
-								fos.write(data, 0, index);
-							} catch (IOException e) {
-			    					e.printStackTrace();
-			    				}
-							try {
-								fos.close();
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
+							
+							fos.write(data, 0, index);
+							fos.close();
+
 							//TODO: put into method helper to clean code. 
 							//checks to see if the Client has any messages or had any issues with final ACK.
 							boolean received=false; 
@@ -751,7 +713,7 @@ public class Server {
 									received = false;
 									if(verbose)
 										System.out.println("Assumed that the Client Received the Final ACK after 10 seconds without a message");
-								} catch(IOException e){e.printStackTrace();}
+								} 
 								if (received){
 									//Verify that the TID of the received packet is correct
 									if(receivePacket.getPort() != hostPort){
@@ -765,7 +727,7 @@ public class Server {
 									incomingBlockID = (int)(((receivePacket.getData()[2] * 256) + receivePacket.getData()[3]) & 0xff);
 									if(incomingBlockID <= dataBlockCounter){
 										System.out.println("incomingBlock: "+ incomingBlockID + " while data block should be: " + dataBlockCounter);
-										try{ socket.send(ack);} catch(IOException e) {e.printStackTrace();}
+										socket.send(ack); 
 										if(verbose)
 											System.out.println("Resending ACK");
 									}
@@ -775,18 +737,13 @@ public class Server {
 					}else if (incomingBlockID <= dataBlockCounter){
 						if(verbose)
 							System.out.println("Incoming block is a duplicate");
-						try { 
 							socket.send(ack);
-						}catch (IOException e){ e.printStackTrace();}
 						
 					} else {
 						if(verbose)
 							System.out.println("Unexpected Error Occured, Recieved Future data Packet");
-						try {
-							socket.send(ack);
-						} catch(IOException e){
-							e.printStackTrace();
-						}
+						socket.send(ack);
+						
 					}
 				} 
 			}//END While
@@ -794,7 +751,11 @@ public class Server {
 		@Override
 		public void run()
 		{
-			sendReceive();
+			try {
+				sendReceive();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			removeThread(this);
 		}
 	}
