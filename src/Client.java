@@ -19,8 +19,8 @@ public class Client extends Thread
 	private static final int PORT_NUMBER = 23;
 	private DatagramSocket socket;
 	private File directory;
-	private InetAddress hostIp;		//IP address of the new host (localHost by default)
-	private InetAddress defaultIp;	//IP address of the default host (localHost by default)
+	private static InetAddress hostIp;		//IP address of the new host (localHost by default)
+	private static InetAddress defaultIp;	//IP address of the default host (localHost by default)
 	/*
 	 * Constructor for objects of class Client
 	 */
