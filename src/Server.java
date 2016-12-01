@@ -152,8 +152,10 @@ public class Server {
 	}
 
 
-	/*
+	/**
 	 * Enables the user to select which directory will act as the server's file system
+	 * 
+	 * @return file that is at the given directory
 	 */
 	private File getDirectory()
 	{
@@ -170,8 +172,10 @@ public class Server {
 		}
 	}
 
-	/*
-	 *   Adds a new thread
+	/**
+	 *	Adds a new thread
+	 *
+	 *	@param thread that will be added
 	 */
 	private void addThread(Thread t)
 	{

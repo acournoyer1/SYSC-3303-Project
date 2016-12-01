@@ -553,8 +553,10 @@ public class Client
 					}
 					message = buildData(data, ++dataBlockCounter, receivePacket.getPort());
 					try {
-						if(verbose)
+						if(verbose) {
 							System.out.println("Sending data. . .");
+							System.out.println("Destination IP: " + message.getAddress());
+						}
 						socket.send(message);
 					} catch (IOException e) {
 						e.printStackTrace();
