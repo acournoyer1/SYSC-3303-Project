@@ -425,7 +425,7 @@ public class Client
 	/*
 	 *	Runs the write request (ie. sends initial request then writes the data to the server)
 	 */
-	private synchronized void sendWriteReceive(String filename)
+	private synchronized void sendWriteReceive(String filename) 
 	{
 		File f = new File(directory.getAbsolutePath() + "\\" + filename);
 		//Check if the user is trying to write a file that does not exist
@@ -461,14 +461,14 @@ public class Client
 		int dataBlockCounter=0;
 		boolean ACKdelayed=false;
 		boolean ACKlost=false;
-		
+		boolean emptyPacketSend = false;
 		int available = 0;
 		try {
 			available = is.available();
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		while(available > 0) {		
+		while(available > 0 || ACKcounter < dataBlockCounter || emptyPacketSend) {		
 			//TODO: Find a better way to better initalize the array size of receive message
 			receiveMsg = new byte[100];
 			//TODO: condense code and place in method for next iteration. 
@@ -476,12 +476,10 @@ public class Client
 			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);	
 			try {
 				socket.setSoTimeout(2000);
-				if(verbose)
-					System.out.println("Waiting for response... \n");
+				if(verbose) System.out.println("Waiting for response... \n");
 				socket.receive(receivePacket);
 			} catch (SocketTimeoutException ste){
-				if(verbose)
-					System.out.println("ACK Packet "+dataBlockCounter+" is declared delayed");
+				if(verbose) System.out.println("ACK Packet "+dataBlockCounter+" is declared delayed");
 				ACKdelayed=true;
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -489,8 +487,7 @@ public class Client
 			if (ACKdelayed){
 				try {
 					socket.setSoTimeout(4000);
-					if(verbose)
-						System.out.println("Waiting for response... \n");
+					if(verbose) System.out.println("Waiting for response... \n");
 					socket.receive(receivePacket);
 					if(!(hostTID instanceof Integer))
 						hostTID = receivePacket.getPort();
@@ -532,7 +529,7 @@ public class Client
 					//"Continue" by sending the thread back to the beginning of the while loop
 					continue;
 				}
-				tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
+				tempIncomingACK = ((receiveMsg[2]<<8) + (receiveMsg[3] & 0xFF));
 				if(verbose){
 					System.out.println("The value coming in as an ack number is"+tempIncomingACK + " while dataBlockCounter : "+dataBlockCounter);
 					System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
@@ -542,11 +539,13 @@ public class Client
 					//Reads data into the file
 					data = new byte[512];
 					try {				
-						is.read(data);
+						if(available>0) is.read(data);
+						else if(emptyPacketSend) System.out.println(Arrays.toString(data));
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
-					message = buildData(data, ++dataBlockCounter, receivePacket.getPort());
+					if(available>0 || emptyPacketSend)
+						message = buildData(data, ++dataBlockCounter, receivePacket.getPort());
 					try {
 						if(verbose) {
 							System.out.println("Sending data. . .");
@@ -556,11 +555,15 @@ public class Client
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					if (available<=0 && emptyPacketSend) emptyPacketSend=false;
 					try {
 						available = is.available();
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
+					if (available == 512 && !emptyPacketSend) emptyPacketSend=true;
+					
+
 					System.out.println("Bytes left in file"+available);
 				} else if(tempIncomingACK < dataBlockCounter){ 
 					//incoming ACK is for block before the one just sent out by this Client
@@ -582,9 +585,10 @@ public class Client
 				}			
 			}
 		}//END Loop
+		
 		//TODO: add to method reduce "loose" code;  
 		//Receive Final ACK to make sure that the thing sent:
-		while (ACKcounter < dataBlockCounter) {
+		/*while (ACKcounter < dataBlockCounter) {
 			if(verbose)
 				System.out.println("Entered seccond loop because ACKcounter is "+ACKcounter + " while block number is: "+dataBlockCounter);
 			
@@ -640,7 +644,7 @@ public class Client
 				}
 			}
 		}//END loop 
-		
+		*/
 		try {
 			is.close();
 		} catch (IOException e) {
@@ -803,7 +807,8 @@ public class Client
 					else portNumber = SERVER_PORT;
 					dispose();
 					if(readRadio.isSelected()) sendReadReceive(filename);
-					else sendWriteReceive(filename);
+					else
+						sendWriteReceive(filename);
 				}
 			});
 			cancelButton.addActionListener(new ActionListener()

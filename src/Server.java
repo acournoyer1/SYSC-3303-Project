@@ -745,6 +745,7 @@ public class Server {
 					//incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
 					incomingBlockID = ((receivePacket.getData()[2]<<8) + (receivePacket.getData()[3] & 0xff));
 					if(verbose)
+						System.out.println("Incoming Data: "+Converter.convertMessage(receiveMsg));
 						System.out.println("Block id incoming:"+incomingBlockID+" and dataBlockCounter: "+(dataBlockCounter+1));
 						if(incomingBlockID == 65408) System.exit(1);
 					if(incomingBlockID == dataBlockCounter+1){
@@ -824,8 +825,9 @@ public class Server {
 										//"Continue" by sending the thread back to the beginning of the while loop
 										continue;
 									}
-									incomingBlockID = (int)(((receivePacket.getData()[2] * 256) + receivePacket.getData()[3]) & 0xffff);
+									incomingBlockID = (int)(((receivePacket.getData()[2] * 256) + receivePacket.getData()[3]) & 0xff);
 									if(incomingBlockID <= dataBlockCounter){
+										System.out.println("incomingBlock: "+ incomingBlockID + " while data block should be: " + dataBlockCounter);
 										try{ socket.send(ack);} catch(IOException e) {e.printStackTrace();}
 										if(verbose)
 											System.out.println("Resending ACK");
