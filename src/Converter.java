@@ -22,7 +22,7 @@ public class Converter {
 		int endIndex = 0;
 		int zeroCount = 0;
 		//Keeps running until it gets two zero's in a row
-		for(int i = 2; zeroCount < 2; i++)
+		for(int i = 2; zeroCount < 2 && i<516; i++)
 		{
 			byteString += ", " + message[i];
 			if(message[i] == 0)
