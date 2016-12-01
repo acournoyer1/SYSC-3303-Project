@@ -19,20 +19,25 @@ public class Client extends Thread
 	private static final int PORT_NUMBER = 23;
 	private DatagramSocket socket;
 	private File directory;
-	private static InetAddress hostIp;		//IP address of the new host (localHost by default)
-	private static InetAddress defaultIp;	//IP address of the default host (localHost by default)
+	private static String hostIP;		//IP address of the new host (localHost by default)
+	//private static InetAddress defaultIp;	//IP address of the default host (localHost by default)
 	/*
 	 * Constructor for objects of class Client
 	 */
 	public Client()
 	{
+		
+		
+		hostIP = readFile("IPAddress.txt");		//host IP Address
+		
+		
 		directory = null;
 		try
 		{
 			socket = new DatagramSocket();	//Creates socket that sends/receives DataPackets
 			
-			defaultIp = InetAddress.getLocalHost();		//default host IP Address
-			hostIp = InetAddress.getLocalHost();	
+			//defaultIp = InetAddress.getLocalHost();		
+			//hostIp = InetAddress.getLocalHost();	
 			
 		}
 		catch(IOException e)
@@ -83,13 +88,13 @@ public class Client extends Thread
 		
 		
 		
-		if(!hostIp.equals(defaultIp)){
+		//if(!hostIp.equals(defaultIp)){
 			
-			return new DatagramPacket(request, request.length, hostIp, PORT_NUMBER);
-		}else{
+		//	return new DatagramPacket(request, request.length, hostIp, PORT_NUMBER);
+	//	}else{
 		
-		return new DatagramPacket(request, request.length, defaultIp, PORT_NUMBER);
-		}
+		return new DatagramPacket(request, request.length, createIp(hostIP), PORT_NUMBER);
+	//	}
 	}
 	
 	
@@ -353,19 +358,53 @@ public class Client extends Thread
 	}
 	
 	
+	
+	private static String readFile(String path) 
+	{
+			  byte[] encoded;
+			  String s = "";
+			try {
+				encoded = Files.readAllBytes(Paths.get(path));
+				s = new String(encoded);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			  return s;
+	}
+	
 	/*
 	 * Allows a user to change the hostIp. Takes a string input i.e "127.0.0.1"
 	 */
-	public void changeIp(String ip){		
+	private InetAddress createIp(String ip){		
 		
+		InetAddress host = null;
 		try {
-			hostIp = InetAddress.getByName(ip);		//creates a new InetAdress object with the provided IP address
-		} catch (UnknownHostException e) {
+			host = InetAddress.getByName(ip);
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		return host;
+	/*	
+		FileWriter fw;
+		PrintWriter pw;
+		try {
+			fw = new FileWriter("IPAddress.txt");
+		    pw = new PrintWriter(fw);
+		    pw.print(ip);
+			pw.close();
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+
+	*/	
+
 		
-		
+
+			
 		
 	}
 	@Override 
