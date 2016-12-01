@@ -540,7 +540,6 @@ public class Client
 					data = new byte[512];
 					try {				
 						if(available>0) is.read(data);
-						else if(emptyPacketSend) System.out.println(Arrays.toString(data));
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
@@ -563,8 +562,7 @@ public class Client
 					}
 					if (available == 512 && !emptyPacketSend) emptyPacketSend=true;
 					
-
-					System.out.println("Bytes left in file"+available);
+					if (verbose)System.out.println("Bytes left in file"+available);
 				} else if(tempIncomingACK < dataBlockCounter){ 
 					//incoming ACK is for block before the one just sent out by this Client
 					if(verbose)
@@ -585,66 +583,7 @@ public class Client
 				}			
 			}
 		}//END Loop
-		
 		//TODO: add to method reduce "loose" code;  
-		//Receive Final ACK to make sure that the thing sent:
-		/*while (ACKcounter < dataBlockCounter) {
-			if(verbose)
-				System.out.println("Entered seccond loop because ACKcounter is "+ACKcounter + " while block number is: "+dataBlockCounter);
-			
-			ACKdelayed=false; ACKlost=false;
-			
-			receiveMsg = new byte[4];
-			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
-			try {
-				socket.setSoTimeout(2000);
-				socket.receive(receivePacket);
-			} catch (SocketTimeoutException ste){
-				System.out.println("Ack is delayed for block number "+(dataBlockCounter));
-				ACKdelayed = true;
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			if (ACKdelayed){
-				try {
-					socket.setSoTimeout(4000);
-					socket.receive(receivePacket);
-				} catch (SocketTimeoutException ste){
-					System.out.println("Ack is considdered lost.. Resending packet");
-					ACKdelayed = false;
-					ACKlost = true;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			//Verify that the TID of the received packet is correct
-			if(hostTID instanceof Integer && receivePacket.getPort() != hostTID){
-				//If the ports do not match, send an errorpacket to the received packet
-				createSendError(new Byte("5"), receivePacket, socket,"Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostTID);
-				//"Continue" by sending the thread back to the beginning of the while loop
-				continue;
-			}
-			if (ACKlost){//re-send packet
-				try{ 
-					socket.send(message);
-				} catch(IOException e){
-					e.printStackTrace();
-				}
-			}else {
-				if(verbose)
-					System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
-				tempIncomingACK = ((receiveMsg[2] & 0xFF)<<8) | (receiveMsg[3] & 0xFF);
-				if(tempIncomingACK == dataBlockCounter) {
-					ACKcounter = tempIncomingACK;
-					if(verbose)
-						System.out.println("ACK recieved ");
-					break;
-				}else {
-					try{socket.send(message);} catch(IOException e){ e.printStackTrace();}
-				}
-			}
-		}//END loop 
-		*/
 		try {
 			is.close();
 		} catch (IOException e) {
