@@ -20,7 +20,7 @@ public class Client extends Thread
 	private DatagramSocket socket;
 	private File directory;
 	private static String hostIP;		//IP address of the new host (localHost by default)
-	//private static InetAddress defaultIp;	//IP address of the default host (localHost by default)
+	private static InetAddress defaultIp;	//IP address of the default host (localHost by default)
 	/*
 	 * Constructor for objects of class Client
 	 */
@@ -36,7 +36,7 @@ public class Client extends Thread
 		{
 			socket = new DatagramSocket();	//Creates socket that sends/receives DataPackets
 			
-			//defaultIp = InetAddress.getLocalHost();		
+			defaultIp = InetAddress.getLocalHost();		
 			//hostIp = InetAddress.getLocalHost();	
 			
 		}
@@ -86,15 +86,15 @@ public class Client extends Thread
 
 		//Creates the DatagramPacket from the byte array and sends it back
 		
+		InetAddress newIP = createIp(hostIP);
 		
-		
-		//if(!hostIp.equals(defaultIp)){
+		if(!newIP.equals(defaultIp)){
 			
-		//	return new DatagramPacket(request, request.length, hostIp, PORT_NUMBER);
-	//	}else{
+			return new DatagramPacket(request, request.length, newIP, PORT_NUMBER);
+		}else{
 		
-		return new DatagramPacket(request, request.length, createIp(hostIP), PORT_NUMBER);
-	//	}
+		return new DatagramPacket(request, request.length, defaultIp, PORT_NUMBER);
+		}
 	}
 	
 	
@@ -358,7 +358,9 @@ public class Client extends Thread
 	}
 	
 	
-	
+	/*
+	 *reads a text file line by line and returns a string
+	 */
 	private static String readFile(String path) 
 	{
 			  byte[] encoded;
@@ -374,7 +376,7 @@ public class Client extends Thread
 	}
 	
 	/*
-	 * Allows a user to change the hostIp. Takes a string input i.e "127.0.0.1"
+	 *creates a InetAddress object with a string. Takes a string input i.e "127.0.0.1"
 	 */
 	private InetAddress createIp(String ip){		
 		
