@@ -783,6 +783,7 @@ public class Server {
 		private JButton browseButton;
 		private JButton okButton;
 		private JButton cancelButton;
+		private SwingWorker<Void,Void> worker;
 		
 		public ServerSetup()
 		{
