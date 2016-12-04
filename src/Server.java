@@ -73,11 +73,11 @@ public class Server {
 					break;
 				} catch (IOException e) {
 					if(shutdown){
-						System.out.println("Shutting Down. . . ");
+						System.out.println("Shutdown detected");
 						return;
 					}
 				}
-			}
+			}	
 			if(verbose)
 				System.out.println("Request received from Host: " + Converter.convertMessage(msg));
 			
@@ -835,10 +835,18 @@ public class Server {
 					if(verboseRadio.isSelected()) verbose = true;
 					else verbose = false;
 					dispose();
-					new ShutDown();
-					SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>(){
+					final ShutDown SD = new ShutDown();
+					worker = new SwingWorker<Void, Void>(){
 						public Void doInBackground(){
 							sendReceive();
+							while(!threads.isEmpty()){
+								try {
+									Thread.sleep(1000);
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							}
+							SD.removeFrame();
 							return null;
 						}
 					};
@@ -881,17 +889,22 @@ public class Server {
 			
 			public ShutDown(){
 				frame = new JFrame();
-				JButton stop = new JButton("Stop");
+				final JButton stop = new JButton("Stop");
 				stop.addActionListener(new ActionListener(){
 					public void actionPerformed(ActionEvent e){
 						shutdown = true;
-						frame.dispose();
+						stop.setEnabled(false);
+						stop.setText("Waiting for transfer. . .");
 					}
 				});
 				frame.add(stop);
-				frame.setSize(100, 100);
+				frame.setSize(200, 100);
 				frame.setLocationRelativeTo(null);
 				frame.setVisible(true);
+			}
+			
+			public void removeFrame(){
+				frame.dispose();
 			}
 		}
 	}
