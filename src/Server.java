@@ -415,9 +415,11 @@ public class Server {
 			int available = 0;
 			
 			//Error Verification Variables 
+			final int OVERLAP = 65535;
 			int dataBlockCounter = -1;
 			int ACKcounter=-1; 
 			int tempIncomingACK=0;
+			int overlapCounter = 0;
 			boolean ACKdelay = false; 
 			boolean ACKlost = false;
 			boolean emptyPacketSend = false;
@@ -472,10 +474,10 @@ public class Server {
 						continue;
 					}
 					if(verbose)
-						System.out.println("Response received from Client: " + Arrays.toString(receiveMessage) + "\n");
+						System.out.println("Response received from Client: " + Arrays.toString(receiveMessage));
 					//parse two bytes into int.
-					tempIncomingACK = ((receiveMessage[2] << 8) + (receiveMessage[3] & 0xFF));
-					
+					tempIncomingACK = ((0x00 << 16) | ((receiveMessage[2] & 0xff)<<8) | (receiveMessage[3] & 0xff)) + overlapCounter*(OVERLAP+1);
+					if (verbose) System.out.println("incoming ACK number: "+tempIncomingACK + " expected ACK number: "+dataBlockCounter);
 					//duplicate/delayed ACK packet restart loop:
 					if (tempIncomingACK <= ACKcounter){
 						//msg should contain previous DatagramPacket to send
@@ -487,6 +489,11 @@ public class Server {
 					} //expected result ACK corresponds to last block sent
 					else if(tempIncomingACK == dataBlockCounter){
 						ACKcounter = tempIncomingACK;
+						if (dataBlockCounter%OVERLAP==0 && dataBlockCounter>0){
+							if(verbose) System.out.println("Outgoing data packet is increased over maximum representable threshold.");
+							overlapCounter++;
+						}
+						
 						data = new byte[512];
 						is.read(data);
 						
@@ -497,6 +504,7 @@ public class Server {
 							System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
 							System.out.println("Destination IP: " + message.getAddress());
 						}	
+						
 						socket.send(message);
 						if (available<=0 && emptyPacketSend) emptyPacketSend=false;
 						
@@ -508,7 +516,7 @@ public class Server {
 					}//default case for circumstance where tempIncomingACK > ACKcounter which should never be possible.
 					else{
 						if(verbose)
-							System.out.println("Unexpected Error Occurred, ACK for future packet Recieved");
+							System.out.println("Unexpected Error Occurred, ACK for future packet Recieved: resending data");
 						
 						socket.send(message);
 					}
@@ -595,6 +603,8 @@ public class Server {
 			socket.send(ack);
 			
 			//Sets up Error Detection Variables
+			final int OVERLAP = 65535;
+			int overlapCounter = 0; 
 			int dataBlockCounter=0;
 			int incomingBlockID=0;
 			boolean delayed = false; 
@@ -602,6 +612,7 @@ public class Server {
 			//Sets up fileOuputStream
 			int index = -1;
 			byte[] receiveMsg;
+			byte[] data;
 			FileOutputStream fos = null;
 			try {
 				fos = new FileOutputStream(new File(directory.getAbsolutePath() + "\\" + filename));
@@ -611,9 +622,6 @@ public class Server {
 
 			//Continually write to the file
 			while(index == -1) {
-				
-				//resets the packet duplicate checker;
-				
 				//Receives data from intermediate host
 				receiveMsg = new byte[516];
 				DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
@@ -631,7 +639,6 @@ public class Server {
 						System.out.println();
 					}
 				}
-				
 				if(delayed){
 					try {
 						socket.setSoTimeout(5000);
@@ -643,7 +650,6 @@ public class Server {
 							System.out.println("Packet declared LOST, Resending Packet");
 					} 
 				}
-				
 				if (lost){
 					lost=false; 
 				} else { 
@@ -658,28 +664,30 @@ public class Server {
 					}
 					//run normally check for duplicates
 					//incomingBlockID = ((receivePacket.getData()[2]&0xFF)<<8) | (receivePacket.getData()[3] & 0xFF);
-					incomingBlockID = ((receivePacket.getData()[2]<<8) + (receivePacket.getData()[3] & 0xff));
+					incomingBlockID = ((0x00 << 16) | ((receiveMsg[2] & 0xff)<<8) | (receiveMsg[3] & 0xff)) + overlapCounter*(OVERLAP+1);
 					if(verbose)
-						System.out.println("Incoming Data: "+Converter.convertMessage(receiveMsg));
+						System.out.println("Incoming Data: "+Arrays.toString(receiveMsg));
 						System.out.println("Block id incoming:"+incomingBlockID+" and dataBlockCounter: "+(dataBlockCounter+1));
-						if(incomingBlockID == 65408) System.exit(1);
+					
 					if(incomingBlockID == dataBlockCounter+1){
 						dataBlockCounter=incomingBlockID;
+						if (dataBlockCounter%OVERLAP==0 && dataBlockCounter>0){
+							if (verbose) System.out.println("overlap neccessary file exceeds max byte range");
+							overlapCounter++;
+						}
 						if(verbose)
 							System.out.println("Received Block Num "+dataBlockCounter);
 						//Copies the data into a new array
-						byte[] data = new byte[512];
+						data = new byte[512];
 						for(int i = 0, j = 4; i < data.length && j < receiveMsg.length; i++, j++)
 						{
 							data[i] = receiveMsg[j];
-						}
-						//TODO: combine for loops, why can't if statement follow statement in first for
-						for(int k = 0; k < data.length; k++) {
-							if(data[k] == 0){
-								index = k;
-								k = data.length;
+							if(data[i] == 0){
+								index = i;
+								i = data.length;
 							}
 						}
+						
 						//Creates and sends acknowledgement to the intermediate host
 						b[2]=(byte)(dataBlockCounter/256);//moves all bits 8 to the right then masks all but the right most 8 bits, 
 						b[3]=(byte)(dataBlockCounter%256); // masks all but the right most 8 bits.
@@ -700,7 +708,6 @@ public class Server {
 							
 							fos.write(data, 0, index);
 							fos.close();
-
 							//TODO: put into method helper to clean code. 
 							//checks to see if the Client has any messages or had any issues with final ACK.
 							boolean received=false; 
@@ -724,12 +731,9 @@ public class Server {
 										//"Continue" by sending the thread back to the beginning of the while loop
 										continue;
 									}
-									incomingBlockID = (int)(((receivePacket.getData()[2] * 256) + receivePacket.getData()[3]) & 0xff);
-									if(incomingBlockID <= dataBlockCounter){
-										System.out.println("incomingBlock: "+ incomingBlockID + " while data block should be: " + dataBlockCounter);
-										socket.send(ack); 
-										if(verbose)
-											System.out.println("Resending ACK");
+									incomingBlockID = (0x00 << 16) | ((receiveMsg[2] & 0xff)<<8) | (receiveMsg[3] & 0xff)+ overlapCounter*(1+OVERLAP);
+									if(incomingBlockID < dataBlockCounter){
+										if(verbose)System.out.println("incomingBlock: "+ incomingBlockID + " while data block should be: " + dataBlockCounter);
 									}
 								}
 							}while(received);
@@ -737,13 +741,9 @@ public class Server {
 					}else if (incomingBlockID <= dataBlockCounter){
 						if(verbose)
 							System.out.println("Incoming block is a duplicate");
-							socket.send(ack);
-						
 					} else {
 						if(verbose)
 							System.out.println("Unexpected Error Occured, Recieved Future data Packet");
-						socket.send(ack);
-						
 					}
 				} 
 			}//END While

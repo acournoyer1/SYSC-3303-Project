@@ -157,19 +157,18 @@ public class Client
 	/*
 	 *	Runs the read request (ie. sends initial request then reads the data from the server)
 	 */
-	private synchronized void sendReadReceive(String filename)
+	private synchronized void sendReadReceive(String filename) throws IOException
 	{
 		//Creates read request DatagramPacket and sends it to the intermediate host
+		DatagramPacket receivePacket;
 		DatagramPacket message = buildRequest("ocTeT", filename, ActionType.READ);
 		if(verbose){
 			System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
 			System.out.println(filename);
 		}
-		try {
-			socket.send(message);	
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		
+		socket.send(message);	
+		
 		
 		//Check if the user is trying to overwrite an existing file in their local directory
 		if(Files.exists(Paths.get(directory.getAbsolutePath() + "\\" + filename))){
@@ -177,15 +176,20 @@ public class Client
 			System.out.println("Stopping thread process . . .");
 			System.exit(0);
 		}
-		
+	
 		//Error Handling Variables:
+		final int OVERLAP = 65535;
 		int dataBlockCounter=-1;
 		int incomingBlockID=-1;
+		int incomingByteNums=0;
+		int overlapCounter = 0; 
 		boolean delayed=false; 
 		boolean lost=false;
 		//Creates a file where the data read from sever is stored
 		int index = -1;
+		byte[] data;
 		byte[] receiveMsg;
+		byte[] b = {0,4,0,0};
 		FileOutputStream fos=null;
 		try {
 			fos = new FileOutputStream(new File(directory.getAbsolutePath() + "\\" + filename)); 
@@ -199,7 +203,7 @@ public class Client
 		while(index == -1) {
 			//Receives the DatagramPacket sent from server/intermediate host
 			receiveMsg = new byte[516];
-			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+			receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 			//delayed and lost handling
 			/*if(!checkIfValidPacket(receiveMsg)){
 				System.out.println("Invalid packet format: 0504 - Invalid packet. ");
@@ -211,8 +215,6 @@ public class Client
 			} catch (SocketTimeoutException ste){
 				System.out.println("Socket timeout file delayed or lost");
 				delayed = true;
-			}catch (IOException e) {
-				e.printStackTrace();System.exit(1);
 			}
 			if (delayed){
 				try {
@@ -222,8 +224,6 @@ public class Client
 					System.out.println("Socket timeout file declared lost\nAsking to be sent again.");
 					lost = true;
 					delayed = false;///if delayed keep that info till the end of the loop
-				}catch (IOException e) { 
-					e.printStackTrace();
 				}
 			}
 			//Start of Run after packet Received. 
@@ -240,13 +240,8 @@ public class Client
 					//"Continue" by sending the thread back to the beginning of the while loop
 					continue;
 				}
-				try {
-					fos.close();
-					Files.delete(Paths.get(directory.getAbsolutePath() + "\\" + filename));
-
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
+				fos.close();
+				Files.delete(Paths.get(directory.getAbsolutePath() + "\\" + filename));
 				System.exit(0);
 			} 
 			//Else No Errors in packet, check for duplicate and run normally. 
@@ -261,28 +256,32 @@ public class Client
 				//TODO: clean this up a bit remove extraneous conditions 
 				//Error Handling Iteration 3: 
 				//parse bytes into int:
-				incomingBlockID = ((receiveMsg[2]<<8) + (receiveMsg[3] & 0xff));		
+				if(verbose)
+					System.out.println("Response received from server: " + Arrays.toString(receiveMsg));
+				incomingByteNums =(0x00 << 16) | ((receiveMsg[2] & 0xff)<<8) | (receiveMsg[3] & 0xff);
+				incomingBlockID= incomingByteNums + overlapCounter*(OVERLAP+1);	
+				if (verbose) System.out.println("incoming packet number: "+incomingBlockID + " expected number: "+(dataBlockCounter+1));
 				if (incomingBlockID == dataBlockCounter+1){ //expected condition incomingBolockNum == dataBlockCounter+1: run normally
 					dataBlockCounter=incomingBlockID;
+					if (incomingByteNums == OVERLAP) {
+						if (verbose) System.out.println("overlap neccessary file exceeds max byte range");
+						overlapCounter++;
+					}
 					if(verbose) {
 						System.out.println("Recieved Block Num "+dataBlockCounter);
 						System.out.println("From IP: " + receivePacket.getAddress());
 						System.out.println("From Port: " + receivePacket.getPort());
 					}
-					byte[] data = new byte[512];
+					data = new byte[512];
 			    	for(int i = 0, j = 4; i < data.length && j<receiveMsg.length; i++, j++)
 			    	{
 			    		data[i] = receiveMsg[j];
-			    	}
-				
-			    	for(int i = 0; i < data.length; i++) {
 			    		if(data[i] == 0){
 			    			index = i;
 			    			i = data.length;
 			    		}
 			    	}
 			    	//send ACK 
-					byte[] b = {0, 4, 0, 0};
 					b[2]=(byte)(dataBlockCounter/256);
 					b[3]=(byte)(dataBlockCounter%256);
 					try {
@@ -291,26 +290,15 @@ public class Client
 					} catch(UnknownHostException e) {
 						e.printStackTrace();
 						System.exit(1);
-					} catch (IOException e1) {
-						e1.printStackTrace();
-						System.exit(1);
-					}
+					} 
 					//Writes received message into the file
 					if(index == -1){			
-						try {
-							fos.write(data);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
+						fos.write(data);
 					}
 					//Writes last bit of the received data
 					else{	
-			  			try {
-			 				fos.write(data, 0, index);
-			 				fos.close();
-			 			} catch (IOException e) {
-			 				e.printStackTrace();
-			 			}
+			  			fos.write(data, 0, index);
+		 				fos.close();
 			 			//Checks to see if server had any issues with final ACK
 			 			boolean received=false; 
 						do{
@@ -324,8 +312,6 @@ public class Client
 									System.out.println("Assumed that the Server Received the Final ACK after 10 secconds without a message");
 									System.out.println("Waiting for next request...\n");
 								}
-							} catch(IOException e){
-								e.printStackTrace();
 							}
 							
 							if (received){
@@ -336,13 +322,13 @@ public class Client
 									//"Continue" by sending the thread back to the beginning of the while loop
 									continue;
 								}
-								incomingBlockID = ((receiveMsg[2] <<8) + (receiveMsg[3] & 0xFF));
+								incomingByteNums =(0x00 << 16) | ((receiveMsg[2] & 0xff)<<8) | (receiveMsg[3] & 0xff);
+								incomingBlockID = incomingByteNums + overlapCounter*(1+OVERLAP);
 								if(verbose)
 									System.out.println("Another dataPacket recieved from Server, Addressing issue, ACK#: "+incomingBlockID);
-								if(incomingBlockID <= dataBlockCounter){
-									try{ socket.send(message);} catch(IOException e) {e.printStackTrace();}
+								if(incomingBlockID < dataBlockCounter){
 									if(verbose)
-										System.out.println("Resending ACK");
+										System.out.println("incomingBlock: "+ incomingBlockID + " while data block should be: " + dataBlockCounter);
 								}
 							}
 						} while(received);
@@ -351,15 +337,10 @@ public class Client
 				//return to top of loop. and wait for server response unless index has been set and the file is done transferring. 
 				}else if(incomingBlockID <= dataBlockCounter){
 					//is a duplicate restart loop
-					if(verbose)						
-						System.out.println("Incoming Data block is a duplicate");
-					try {
-						socket.send(message);
-					}catch(IOException e){e.printStackTrace();} 
-					
-				//incomingdataBlockCounter Higher than dataBlockCounter should never happen, print error and resend ack.	
+					if(verbose)	System.out.println("Incoming Data block is a duplicate");
+				//incomingdataBlockCounter Higher than dataBlockCounter should never happen, print error 
 				}else{
-					System.out.println("Unexpected Error Occured, Recieved Future Data Packet before ACK sent for present\n...Restarting Loop");
+					if(verbose)System.out.println("Unexpected Error Occured, Recieved Future Data Packet before ACK sent for present\n...Restarting Loop");
 				} 	
 			}
 		}//END while
@@ -425,7 +406,7 @@ public class Client
 	/*
 	 *	Runs the write request (ie. sends initial request then writes the data to the server)
 	 */
-	private synchronized void sendWriteReceive(String filename) 
+	private synchronized void sendWriteReceive(String filename) throws IOException
 	{
 		File f = new File(directory.getAbsolutePath() + "\\" + filename);
 		//Check if the user is trying to write a file that does not exist
@@ -449,25 +430,20 @@ public class Client
 		//Creates write request DatagramPacket and sends it
 		DatagramPacket message = buildRequest("ocTeT", filename, ActionType.WRITE);	
 		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
-		try {
-			socket.send(message);	
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		socket.send(message);	
+		
 		byte[] receiveMsg = new byte[4];
 		//Error detection variables
+		final int OVERLAP = 65535;
+		int overlapCounter=0;
 		int tempIncomingACK=0; 
 		int ACKcounter=0;
 		int dataBlockCounter=0;
 		boolean ACKdelayed=false;
 		boolean ACKlost=false;
 		boolean emptyPacketSend = false;
-		int available = 0;
-		try {
-			available = is.available();
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}
+		int available = is.available();
+		
 		while(available > 0 || ACKcounter < dataBlockCounter || emptyPacketSend) {		
 			//TODO: Find a better way to better initalize the array size of receive message
 			receiveMsg = new byte[100];
@@ -481,8 +457,6 @@ public class Client
 			} catch (SocketTimeoutException ste){
 				if(verbose) System.out.println("ACK Packet "+dataBlockCounter+" is declared delayed");
 				ACKdelayed=true;
-			} catch (IOException e) {
-				e.printStackTrace();
 			}
 			if (ACKdelayed){
 				try {
@@ -496,18 +470,11 @@ public class Client
 						System.out.println("ACK Packet is declared lost\nResending Data Packet");
 					ACKdelayed=false;
 					ACKlost = true; 
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				} 
 			}
-			
 			if (ACKlost){
-				try {
-					socket.send(message);
-					ACKlost=false;
-				} catch (IOException e){
-					e.printStackTrace();
-				}
+				socket.send(message);
+				ACKlost=false;
 			}//Check for File related errors
 			else if((receivePacket.getData()[3] == 2 || receivePacket.getData()[3] == 3 || receivePacket.getData()[3] == 6) && receivePacket.getData()[1] == 5){
 				//Verify that the TID of the received packet is correct
@@ -529,37 +496,34 @@ public class Client
 					//"Continue" by sending the thread back to the beginning of the while loop
 					continue;
 				}
-				tempIncomingACK = ((receiveMsg[2]<<8) + (receiveMsg[3] & 0xFF));
+				tempIncomingACK = ((0x00 << 16) | ((receiveMsg[2] & 0xff)<<8) | (receiveMsg[3] & 0xff)) + overlapCounter*(OVERLAP+1);
 				if(verbose){
 					System.out.println("The value coming in as an ack number is"+tempIncomingACK + " while dataBlockCounter : "+dataBlockCounter);
 					System.out.println("Response received from Host: " + Arrays.toString(receiveMsg) + "\n");
 				}
 				if(tempIncomingACK == dataBlockCounter){
 					ACKcounter = tempIncomingACK;
-					//Reads data into the file
-					data = new byte[512];
-					try {				
-						if(available>0) is.read(data);
-					} catch (IOException e1) {
-						e1.printStackTrace();
+					if (dataBlockCounter%OVERLAP==0 && dataBlockCounter>0){
+						if(verbose)System.out.println("Outgoing data packet is increased over maximum representable threshold.");
+						overlapCounter++;
 					}
+					//Reads data into the file
+					data = new byte[512];		
+					if(available>0) is.read(data);
+					
 					if(available>0 || emptyPacketSend)
 						message = buildData(data, ++dataBlockCounter, receivePacket.getPort());
-					try {
-						if(verbose) {
-							System.out.println("Sending data. . .");
-							System.out.println("Destination IP: " + message.getAddress());
-						}
-						socket.send(message);
-					} catch (IOException e) {
-						e.printStackTrace();
+					
+					if(verbose) {
+						System.out.println("Sending data. . .");
+						System.out.println("Destination IP: " + message.getAddress());
 					}
+					socket.send(message);
+				
 					if (available<=0 && emptyPacketSend) emptyPacketSend=false;
-					try {
-						available = is.available();
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
+					
+					available = is.available();
+					
 					if (available == 512 && !emptyPacketSend) emptyPacketSend=true;
 					
 					if (verbose)System.out.println("Bytes left in file"+available);
@@ -567,28 +531,15 @@ public class Client
 					//incoming ACK is for block before the one just sent out by this Client
 					if(verbose)
 						System.out.println("CASE: Duplicate ACK.. RESPONSE: resending packet");
-					try{
-						socket.send(message);
-					} catch(IOException e){
-						e.printStackTrace();
-					}
+					
+					socket.send(message);				
 				} else {
-					if(verbose)
-						System.out.println("CASE: Unexpected Error Occurred(ACK for future packet Recieved) RESPONSE: resending packet");
-					try{
-						socket.send(message);
-					} catch(IOException e){
-						e.printStackTrace();
-					}
+					if(verbose) System.out.println("CASE: Unexpected Error Occurred(ACK for future packet Recieved) RESPONSE: resending packet");
+					socket.send(message);
 				}			
 			}
 		}//END Loop
-		//TODO: add to method reduce "loose" code;  
-		try {
-			is.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		is.close();
 	}
 
 
@@ -745,9 +696,10 @@ public class Client
 					if(testRadio.isSelected()) portNumber = HOST_PORT;
 					else portNumber = SERVER_PORT;
 					dispose();
-					if(readRadio.isSelected()) sendReadReceive(filename);
+					if(readRadio.isSelected()) 
+						try{ sendReadReceive(filename); } catch (IOException e1){e1.printStackTrace();}
 					else
-						sendWriteReceive(filename);
+						try{ sendWriteReceive(filename); } catch (IOException e1){e1.printStackTrace();}
 				}
 			});
 			cancelButton.addActionListener(new ActionListener()
