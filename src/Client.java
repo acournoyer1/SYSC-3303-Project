@@ -88,6 +88,8 @@ public class Client extends Thread
 		
 		InetAddress newIP = createIp(hostIP);
 		
+
+		//System.out.print(newIP.toString());
 		if(!newIP.equals(defaultIp)){
 			
 			return new DatagramPacket(request, request.length, newIP, PORT_NUMBER);
