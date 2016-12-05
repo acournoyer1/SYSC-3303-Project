@@ -16,7 +16,7 @@ import javax.swing.JFileChooser;
  */
 public class Client extends Thread
 {
-	private static final int PORT_NUMBER = 23;
+	private static final int PORT_NUMBER = 69;
 	private DatagramSocket socket;
 	private File directory;
 	private static String hostIP;		//IP address of the new host (localHost by default)
