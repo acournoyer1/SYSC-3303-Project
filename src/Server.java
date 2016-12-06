@@ -409,7 +409,7 @@ public class Server {
 				e2.printStackTrace();
 			}
 			byte[] receiveMessage = new byte[4];
-			int available = 0;
+			int available = 1;
 			
 			//Error Verification Variables 
 			final int OVERLAP = 65535;
@@ -420,11 +420,9 @@ public class Server {
 			boolean ACKdelay = false; 
 			boolean ACKlost = false;
 			boolean emptyPacketSend = false;
-			try {
-				is.read(data);
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			
+			is.read(data);
+		
 			DatagramPacket message = buildData(data, ++dataBlockCounter, hostPort);
 			socket.send(message);
 			if(verbose)
@@ -754,6 +752,11 @@ public class Server {
 	 */
 	public static void main(String args[])
 	{
+		try {
+			System.out.println("Your local IP adress is: " + InetAddress.getLocalHost().getHostAddress());
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
 		Server server = new Server();
 		server.setUp();
 	}
