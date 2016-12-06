@@ -57,7 +57,6 @@ public class Converter {
 		try {
 			byte[] c = Arrays.copyOfRange(message, 4, message.length);
 			decodedDataUsingUTF8 = new String(c, "UTF-8");
-		    System.out.println(decodedDataUsingUTF8);
 		} catch (UnsupportedEncodingException e1) {
 			e1.printStackTrace();
 		}

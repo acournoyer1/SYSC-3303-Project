@@ -4,10 +4,12 @@ import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.ParseException;
 import java.util.Arrays;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
+import javax.swing.text.MaskFormatter;
 
 /*
  * Creates a instance of client which sends and receives files from/to server through the intermediate host
@@ -25,7 +27,8 @@ public class Client
 	private File directory;
 	private boolean verbose;
 	private String filename;
-	
+	private static String hostIP;		//IP address of the new host (localHost by default)
+	//private static InetAddress defaultIp;	//IP address of the default host (localHost by default)
 	private Integer hostTID;
 
 	/*
@@ -34,6 +37,9 @@ public class Client
 	public Client()
 	{
 		directory = null;
+		
+		hostIP = readFile("IPAddress.txt");		//host IP Address
+		System.out.println(hostIP);
 		try
 		{
 			socket = new DatagramSocket();	//Creates socket that sends/receives DataPackets
@@ -80,14 +86,7 @@ public class Client
 		}
 		request[i++] = 0;
 
-		//Creates the DatagramPacket from the byte array and sends it back
-		try {					
-			return new DatagramPacket(request, request.length, InetAddress.getLocalHost(), portNumber);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			return null;
-		}
-
+		return new DatagramPacket(request, request.length,  createIp(hostIP), portNumber);
 	}
 
 	/**
@@ -116,7 +115,7 @@ public class Client
 		b[i++] = 0;
 		
 		try {			
-			DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+			DatagramPacket ack = new DatagramPacket(b, b.length, createIp(hostIP), receivePacket.getPort());
 			socket.send(ack);
 		} catch (UnknownHostException e){
 			e.printStackTrace();
@@ -145,12 +144,7 @@ public class Client
 
 		//Creates DatagramPacket containing the data and sends it back
 		DatagramPacket send = null;
-		try {
-			send = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), portNumber); 
-		}
-		catch(IOException e){
-			e.printStackTrace();
-		}
+		send = new DatagramPacket(msg, msg.length, createIp(hostIP), portNumber);
 		return send;
 	}
 
@@ -233,6 +227,7 @@ public class Client
 			} //not lost but has an error
 			else if((receivePacket.getData()[3] == 1 || receivePacket.getData()[3] == 2) && receivePacket.getData()[1] == 5)
 			{
+				if(hostTID == null) hostTID = receivePacket.getPort();
 				//Verify that the TID of the received packet is correct
 				if(receivePacket.getPort() != hostTID){
 					//If the ports do not match, send an errorpacket to the received packet
@@ -246,6 +241,7 @@ public class Client
 			} 
 			//Else No Errors in packet, check for duplicate and run normally. 
 			else {
+				if(hostTID == null) hostTID = receivePacket.getPort();
 				//Verify that the TID of the received packet is correct
 				if(hostTID instanceof Integer && receivePacket.getPort() != hostTID){
 					//If the ports do not match, send an errorpacket to the received packet
@@ -253,7 +249,7 @@ public class Client
 					//"Continue" by sending the thread back to the beginning of the while loop
 					continue;
 				}
-				//TODO: clean this up a bit remove extraneous conditions 
+				
 				//Error Handling Iteration 3: 
 				//parse bytes into int:
 				if(verbose)
@@ -300,8 +296,10 @@ public class Client
 			  			fos.write(data, 0, index);
 		 				fos.close();
 			 			//Checks to see if server had any issues with final ACK
-			 			boolean received=false; 
+			 			boolean received; 
 						do{
+							receiveMsg = new byte[512];
+							receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 							received = true;
 							try {
 								socket.setSoTimeout(10000);
@@ -325,8 +323,9 @@ public class Client
 								incomingByteNums =(0x00 << 16) | ((receiveMsg[2] & 0xff)<<8) | (receiveMsg[3] & 0xff);
 								incomingBlockID = incomingByteNums + overlapCounter*(1+OVERLAP);
 								if(verbose)
+									System.out.println("Response recieved from server: " + Arrays.toString(receiveMsg));
 									System.out.println("Another dataPacket recieved from Server, Addressing issue, ACK#: "+incomingBlockID);
-								if(incomingBlockID < dataBlockCounter){
+								if(incomingBlockID <= dataBlockCounter){
 									if(verbose)
 										System.out.println("incomingBlock: "+ incomingBlockID + " while data block should be: " + dataBlockCounter);
 								}
@@ -432,6 +431,7 @@ public class Client
 		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
 		socket.send(message);	
 		
+		int available = 1;
 		byte[] receiveMsg = new byte[4];
 		//Error detection variables
 		final int OVERLAP = 65535;
@@ -442,12 +442,9 @@ public class Client
 		boolean ACKdelayed=false;
 		boolean ACKlost=false;
 		boolean emptyPacketSend = false;
-		int available = is.available();
 		
 		while(available > 0 || ACKcounter < dataBlockCounter || emptyPacketSend) {		
-			//TODO: Find a better way to better initalize the array size of receive message
 			receiveMsg = new byte[100];
-			//TODO: condense code and place in method for next iteration. 
 			//Receives response from server
 			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);	
 			try {
@@ -561,6 +558,54 @@ public class Client
 		}
 	}
 
+	/*
+	 *reads a text file line by line and returns a string
+	 */
+	private static String readFile(String path) 
+	{
+			  byte[] encoded;
+			  String s = "";
+			try {
+				encoded = Files.readAllBytes(Paths.get(path));
+				s = new String(encoded);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			  return s;
+	}
+	
+	/*
+	 *creates a InetAddress object with a string. Takes a string input i.e "127.0.0.1"
+	 */
+	private InetAddress createIp(String ip){		
+		
+		InetAddress host = null;
+		try {
+			host = InetAddress.getByName(ip);
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		return host;
+	}
+	
+	
+	private void addIPAddress(String ip){
+		
+		FileWriter fw;
+		PrintWriter pw;
+		try {
+			fw = new FileWriter("IPAddress.txt");		//writes to the file the local IP Address if the file is empty
+		    pw = new PrintWriter(fw);
+		    pw.print(ip);
+			pw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	/*
 	 *    Creates a host instance and runs it
@@ -590,9 +635,12 @@ public class Client
 		private JRadioButton readRadio;
 		private JTextField directoryPath;
 		private JTextField fileField;
+		private JTextField IPAddressField;
 		private JButton browseButton;
 		private JButton okButton;
 		private JButton cancelButton;
+		private JRadioButton defaultIPRadio;
+		
 		
 		public ClientSetup()
 		{
@@ -600,7 +648,14 @@ public class Client
 			this.directoryPath = new JTextField(file.getAbsolutePath());
 			this.directoryPath.setColumns(25);
 			this.fileField = new JTextField("");
+			try {
+				this.IPAddressField = new JFormattedTextField(new MaskFormatter("###.###.###.###"));
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			this.fileField.setColumns(5);
+			this.IPAddressField.setColumns(10);
 			this.browseButton = new JButton("Browse...");
 			this.okButton = new JButton("OK");
 			this.cancelButton = new JButton("Cancel");
@@ -608,9 +663,12 @@ public class Client
 			this.verboseRadio = new JRadioButton("Verbose", true);
 			this.testRadio = new JRadioButton("Test", true);
 			this.readRadio = new JRadioButton("Read", true);
+			this.defaultIPRadio = new JRadioButton("Default IP", true);
+			JRadioButton newIPRadio = new JRadioButton("New IP");
 			JRadioButton quietRadio = new JRadioButton("Quiet");
 			JRadioButton normalRadio = new JRadioButton("Normal");
 			JRadioButton writeRadio = new JRadioButton("Write");
+			
 			
 			ButtonGroup g1 = new ButtonGroup();
 			g1.add(verboseRadio);
@@ -621,6 +679,9 @@ public class Client
 			ButtonGroup g3 = new ButtonGroup();
 			g3.add(readRadio);
 			g3.add(writeRadio);
+			ButtonGroup g4 = new ButtonGroup();
+			g4.add(defaultIPRadio);
+			g4.add(newIPRadio);
 			
 			JPanel directoryPanel = new JPanel();
 			directoryPanel.add(new JLabel("Client Directory: "));
@@ -638,6 +699,11 @@ public class Client
 			JPanel transferPanel = new JPanel();
 			transferPanel.add(this.readRadio);
 			transferPanel.add(writeRadio);
+			
+			JPanel defaultIPPanel = new JPanel();
+			defaultIPPanel.add(this.defaultIPRadio);
+			defaultIPPanel.add(newIPRadio);
+			defaultIPPanel.add(IPAddressField);
 			
 			JPanel filePanel = new JPanel();
 			filePanel.add(new JLabel("Filename: "));
@@ -659,9 +725,14 @@ public class Client
 			JSplitPane s4 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 			s4.setDividerSize(0);
 			s4.setBorder(BorderFactory.createEmptyBorder());
+			JSplitPane s5 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+			s5.setDividerSize(0);
+			s5.setBorder(BorderFactory.createEmptyBorder());
 			
 			s3.setTopComponent(transferPanel);
-			s3.setBottomComponent(filePanel);
+			s3.setBottomComponent(s5);
+			s5.setTopComponent(defaultIPPanel);
+			s5.setBottomComponent(filePanel);
 			s2.setTopComponent(s3);
 			s2.setBottomComponent(buttonPanel);
 			s4.setTopComponent(outputPanel);
@@ -700,7 +771,26 @@ public class Client
 						try{ sendReadReceive(filename); } catch (IOException e1){e1.printStackTrace();}
 					else
 						try{ sendWriteReceive(filename); } catch (IOException e1){e1.printStackTrace();}
+					
+					
+					
+					
+					if(defaultIPRadio.isSelected()){
+						try {
+					
+						addIPAddress(InetAddress.getLocalHost().toString());
+						} catch (UnknownHostException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+					else{
+						addIPAddress(IPAddressField.getText());		//if newIp is selected, write the new IP to the text file
+					}
+					
+					
 				}
+				
 			});
 			cancelButton.addActionListener(new ActionListener()
 			{

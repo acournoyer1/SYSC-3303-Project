@@ -200,7 +200,7 @@ public class Server {
 	 * @param corresponding packet
 	 * @param socket to send off of from current thread
 	 */
-	private void createSendError(byte errorNum, DatagramPacket receivePacket, DatagramSocket socket, String message){
+	private void createSendError(byte errorNum, DatagramPacket receivePacket,  DatagramSocket socket, InetAddress destination, String message){
 		byte[] b = message.getBytes() != null ? new byte[4 + message.getBytes().length + 1] : new byte[4];
 		b[0] = 0;
 		b[1] = 5;
@@ -217,16 +217,11 @@ public class Server {
 		
 		b[i++] = 0;
 		
-		try {			
-			DatagramPacket ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
-			try {
-				socket.send(ack);
-			}catch (IOException IOE){
-				IOE.printStackTrace();
-				System.exit(1);
-			}
-		} catch (UnknownHostException e){
-			e.printStackTrace();
+		DatagramPacket ack = new DatagramPacket(b, b.length, destination, receivePacket.getPort());
+		try {
+			socket.send(ack);
+		}catch (IOException IOE){
+			IOE.printStackTrace();
 			System.exit(1);
 		}
 	}
@@ -293,7 +288,7 @@ public class Server {
 			if(!checkIfValidPacket(msg)){
 				if(verbose)
 					System.out.println("Sending error packet . . .");
-				createSendError(new Byte("4"), packet, receiveSocket, "Invalid packet format: 0504 - Invalid packet. ");
+				createSendError(new Byte("4"), packet, receiveSocket, packet.getAddress(), "Invalid packet format: 0504 - Invalid packet. ");
 			}
 			//Extracts the filename
 			int index = -1;
@@ -327,18 +322,18 @@ public class Server {
 					//System.out.println("Failed to read: 0501 - File not found. " + filename);
 					if(verbose)
 						System.out.println("Sending error packet . . .");
-					createSendError(new Byte("1"), packet, receiveSocket, "Failed to read: 0501 - File not found. " + filename);
+					createSendError(new Byte("1"), packet, receiveSocket, packet.getAddress(), "Failed to read: 0501 - File not found. " + filename);
 				}
 				//Check if the file can be read
 				else if(!Files.isReadable(path)){
 					//System.out.println("Failed to read: 0502 - Access Violation. " + filename);
-					createSendError(new Byte("2"), packet, receiveSocket, "Failed to read: 0502 - Access Violation. " + filename);
+					createSendError(new Byte("2"), packet, receiveSocket, packet.getAddress(), "Failed to read: 0502 - Access Violation. " + filename);
 				}
 				//No errors, send valid response
 				else{
 					if(verbose)
 						System.out.println("The request is a valid read request.");
-					addThread(new ReadThread(packet.getPort(), filename));
+					addThread(new ReadThread(packet, filename));
 				}
 			}
 			//Creates new write thread with filename
@@ -348,25 +343,25 @@ public class Server {
 				 if(Files.exists(path)){
 					if(verbose)
 						System.out.println("Sending error packet . . .");
-					createSendError(new Byte("6"), packet, receiveSocket, "Failed to write: 0506 - File already exists " + filename);
+					createSendError(new Byte("6"), packet, receiveSocket, packet.getAddress(), "Failed to write: 0506 - File already exists " + filename);
 				}
 				//Check if can write
 				 else if(Files.isWritable(path)){
 					if(verbose)
 						System.out.println("Sending error packet . . .");
-					createSendError(new Byte("2"), packet, receiveSocket, "Failed to read: 0502 - Access Violation. " + filename);
+					createSendError(new Byte("2"), packet, receiveSocket, packet.getAddress(), "Failed to read: 0502 - Access Violation. " + filename);
 				}
 				//Check if there is enough space on the server
 				else if(f.getParentFile().getFreeSpace() < packet.getData().length){
 					if(verbose)
 						System.out.println("Sending error packet . . .");
-					createSendError(new Byte("3"), packet, receiveSocket, "Failed to write: 0503 - Not enough disk space. " + filename);
+					createSendError(new Byte("3"), packet, receiveSocket, packet.getAddress(), "Failed to write: 0503 - Not enough disk space. " + filename);
 				}
 
 				else{
 					if(verbose)
 						System.out.println("The request is a valid write request.");
-					addThread(new WriteThread(packet.getPort(), filename));
+					addThread(new WriteThread(packet, filename));
 				}
 			}
 			removeThread(this);
@@ -380,14 +375,16 @@ public class Server {
 	{
 		private DatagramSocket socket;
 		private int hostPort;
+		private InetAddress clientIP;
 		private String filename;
 
 		/*
 		 *   Creates new socket and initiates filename and port
 		 */
-		public ReadThread(int hostPort, String filename)
+		public ReadThread(DatagramPacket packet, String filename)
 		{
-			this.hostPort = hostPort;
+			this.hostPort = packet.getPort();
+			this.clientIP = packet.getAddress();
 			this.filename = filename;
 			try {
 				socket = new DatagramSocket();
@@ -412,7 +409,7 @@ public class Server {
 				e2.printStackTrace();
 			}
 			byte[] receiveMessage = new byte[4];
-			int available = 0;
+			int available = 1;
 			
 			//Error Verification Variables 
 			final int OVERLAP = 65535;
@@ -423,11 +420,9 @@ public class Server {
 			boolean ACKdelay = false; 
 			boolean ACKlost = false;
 			boolean emptyPacketSend = false;
-			try {
-				is.read(data);
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			
+			is.read(data);
+		
 			DatagramPacket message = buildData(data, ++dataBlockCounter, hostPort);
 			socket.send(message);
 			if(verbose)
@@ -469,7 +464,7 @@ public class Server {
 						if(verbose)
 							System.out.println("Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostPort);
 						//If the ports do not match, send an errorpacket to the received packet
-						createSendError(new Byte("5"), receivePacket, socket, "Error 505: Invalid TID.");
+						createSendError(new Byte("5"), receivePacket, socket, clientIP, "Error 505: Invalid TID.");
 						//"Continue" by sending the thread back to the beginning of the while loop
 						continue;
 					}
@@ -545,11 +540,7 @@ public class Server {
 
 			//Creates DatagramPacket and returns it
 			DatagramPacket send = null;
-			try {
-				send = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), portNumber);
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
+			send = new DatagramPacket(msg, msg.length, clientIP, portNumber);
 			return send;
 		}
 
@@ -572,14 +563,16 @@ public class Server {
 	{
 		private DatagramSocket socket;
 		private int hostPort;
+		private InetAddress clientIP;
 		private String filename;
 
 		/*
 		 *   Creates new socket and initiates filename and port
 		 */
-		public WriteThread(int hostPort, String filename)
+		public WriteThread(DatagramPacket packet, String filename)
 		{
-			this.hostPort = hostPort;
+			this.hostPort = packet.getPort();
+			this.clientIP = packet.getAddress();
 			this.filename = filename;
 			try {
 				socket = new DatagramSocket();
@@ -596,9 +589,7 @@ public class Server {
 			//sends first ACK to confirm that the Client can continue the file transfer. 
 			byte[] b = {0, 4, 0, 0};
 			DatagramPacket ack = null;
-			try {
-				ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), hostPort);
-			} catch (UnknownHostException e2) {	e2.printStackTrace();}
+			ack = new DatagramPacket(b, b.length, clientIP, hostPort);
 			
 			socket.send(ack);
 			
@@ -658,7 +649,7 @@ public class Server {
 						if(verbose)
 							System.out.println("Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostPort);
 						//If the ports do not match, send an errorpacket to the received packet
-						createSendError(new Byte("5"), receivePacket, socket, "Error 505: Invalid TID");
+						createSendError(new Byte("5"), receivePacket, socket, clientIP, "Error 505: Invalid TID");
 						//"Continue" by sending the thread back to the beginning of the while loop
 						continue;
 					}
@@ -691,11 +682,7 @@ public class Server {
 						//Creates and sends acknowledgement to the intermediate host
 						b[2]=(byte)(dataBlockCounter/256);//moves all bits 8 to the right then masks all but the right most 8 bits, 
 						b[3]=(byte)(dataBlockCounter%256); // masks all but the right most 8 bits.
-						try {
-							ack = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), hostPort);
-						} catch (UnknownHostException e2) {
-							e2.printStackTrace();
-						}
+						ack = new DatagramPacket(b, b.length, clientIP, hostPort);
 						
 						socket.send(ack);
 						//Writes data to the file
@@ -727,7 +714,7 @@ public class Server {
 										if(verbose)
 											System.out.println("Received ACK from port:" + receivePacket.getPort() + " when expecting port:" + hostPort);
 										//If the ports do not match, send an errorpacket to the received packet
-										createSendError(new Byte("5"), receivePacket, socket, "Error 505: Invalid TID");
+										createSendError(new Byte("5"), receivePacket, socket, clientIP, "Error 505: Invalid TID");
 										//"Continue" by sending the thread back to the beginning of the while loop
 										continue;
 									}
@@ -765,6 +752,11 @@ public class Server {
 	 */
 	public static void main(String args[])
 	{
+		try {
+			System.out.println("Your local IP adress is: " + InetAddress.getLocalHost().getHostAddress());
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
 		Server server = new Server();
 		server.setUp();
 	}
