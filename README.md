@@ -1,6 +1,6 @@
 # SYSC-3303-Project
 
-Iteration 4
+Iteration 5
 
 Setup instructions: 
 	
@@ -20,6 +20,8 @@ Setup instructions:
 			-If write, then type in the name of the file you would like to write to 
 			-If read, then type in the name of the file you would like to read from 
 	
+	4. for effective use from computer to computer you must add the computer that is running the server's "machine name" to the text file entitled IP adress. 
+	in order to start client. The same should be done for error simulator even if error sim and server are run on the same machine. 
 
 Testing instructions: 
 	
@@ -83,20 +85,21 @@ Work Done:
 
 	->Dan
 	- Created all timing diagrams 
+	- worked on error sim bit corrupt and checking if valid packets. 
 	
 	->Ryan 	
 	- Added a way to parse error packets properly
 	- Implemented invalid TID (Error 5)
 	- Error Simulator Algorithm
 	- Server shutdown
-	- Verbose implementation
+	- TID handling. 
 	
 	->Alex
 	- Setup GUIs
-	- Some work on Error Simulator
+	- Some work on Error Simulator involving corupt and gui interfacing.
 	
 	->Daman
-	- UML Diagrams
+	- Text file interatction itteration 5 
 	
 	->Brendan
-	- Network Error Handling 
+	- Network errors, specific cases for sends, normal mode effectiveness.  
