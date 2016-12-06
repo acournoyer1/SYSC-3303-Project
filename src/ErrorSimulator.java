@@ -726,7 +726,7 @@ public class ErrorSimulator {
 			}
 			else
 			{
-				return new CorruptionError((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()), (Field)fields.getSelectedItem());
+				return new CorruptionError((ErrorType)errorType.getSelectedItem(), (PacketType)packetType.getSelectedItem(), Integer.parseInt(blockField.getText()), (Field)fields.getSelectedItem(), corruptionField.getText());
 			}
 			
 		}
@@ -787,11 +787,13 @@ public class ErrorSimulator {
 	private class CorruptionError extends Error 
 	{
 		private Field field;
+		private String corruption;
 		
-		public CorruptionError(ErrorType e, PacketType p, int blockNumber, Field f)
+		public CorruptionError(ErrorType e, PacketType p, int blockNumber, Field f, String s)
 		{
 			super(e, p, blockNumber);
 			this.field = f;
+			this.corruption = s;
 		}
 		
 		@SuppressWarnings("unused")
@@ -800,6 +802,10 @@ public class ErrorSimulator {
 			return field;
 		}
 		
+		public String getCorrupted()
+		{
+			return corruption;
+		}
 	}
 	
 	
