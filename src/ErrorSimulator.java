@@ -205,7 +205,7 @@ public class ErrorSimulator {
 								bytes[j] = array[i];
 							}
 						}
-						packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), serverPort);
+						packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), SERVER_PORT_NUMBER);
 						socket.send(packet);
 						error.execute();
 						break;
