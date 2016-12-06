@@ -39,7 +39,7 @@ public class Client
 		directory = null;
 		
 		hostIP = readFile("IPAddress.txt");		//host IP Address
-		System.out.println(hostIP);
+		
 		try
 		{
 			socket = new DatagramSocket();	//Creates socket that sends/receives DataPackets
@@ -86,7 +86,7 @@ public class Client
 		}
 		request[i++] = 0;
 
-		return new DatagramPacket(request, request.length,  createIp(hostIP), portNumber);
+		return new DatagramPacket(request, request.length, createIp(hostIP), portNumber);
 	}
 
 	/**
@@ -153,6 +153,13 @@ public class Client
 	 */
 	private synchronized void sendReadReceive(String filename) throws IOException
 	{
+		//Check if the user is trying to overwrite an existing file in their local directory
+		if(Files.exists(Paths.get(directory.getAbsolutePath() + "\\" + filename))){
+			System.out.println("Failed to write: 0506 - File already exists on local disk: " + filename);
+			System.out.println("Stopping thread process . . .");
+			System.exit(0);
+		}
+	
 		//Creates read request DatagramPacket and sends it to the intermediate host
 		DatagramPacket receivePacket;
 		DatagramPacket message = buildRequest("ocTeT", filename, ActionType.READ);
@@ -163,14 +170,6 @@ public class Client
 		
 		socket.send(message);	
 		
-		
-		//Check if the user is trying to overwrite an existing file in their local directory
-		if(Files.exists(Paths.get(directory.getAbsolutePath() + "\\" + filename))){
-			System.out.println("Failed to write: 0506 - File already exists on local disk: " + filename);
-			System.out.println("Stopping thread process . . .");
-			System.exit(0);
-		}
-	
 		//Error Handling Variables:
 		final int OVERLAP = 65535;
 		int dataBlockCounter=-1;
@@ -602,7 +601,6 @@ public class Client
 		    pw.print(ip);
 			pw.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -648,12 +646,7 @@ public class Client
 			this.directoryPath = new JTextField(file.getAbsolutePath());
 			this.directoryPath.setColumns(25);
 			this.fileField = new JTextField("");
-			try {
-				this.IPAddressField = new JFormattedTextField(new MaskFormatter("###.###.###.###"));
-			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			this.IPAddressField = new JTextField();
 			this.fileField.setColumns(5);
 			this.IPAddressField.setColumns(10);
 			this.browseButton = new JButton("Browse...");
@@ -767,28 +760,13 @@ public class Client
 					if(testRadio.isSelected()) portNumber = HOST_PORT;
 					else portNumber = SERVER_PORT;
 					dispose();
+					if(!defaultIPRadio.isSelected()){
+						addIPAddress(IPAddressField.getText());
+					}	
 					if(readRadio.isSelected()) 
 						try{ sendReadReceive(filename); } catch (IOException e1){e1.printStackTrace();}
 					else
-						try{ sendWriteReceive(filename); } catch (IOException e1){e1.printStackTrace();}
-					
-					
-					
-					
-					if(defaultIPRadio.isSelected()){
-						try {
-					
-						addIPAddress(InetAddress.getLocalHost().toString());
-						} catch (UnknownHostException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-					}
-					else{
-						addIPAddress(IPAddressField.getText());		//if newIp is selected, write the new IP to the text file
-					}
-					
-					
+						try{ sendWriteReceive(filename); } catch (IOException e1){e1.printStackTrace();}		
 				}
 				
 			});
