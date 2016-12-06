@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.MaskFormatter;
@@ -136,8 +138,12 @@ public class ErrorSimulator {
 			DatagramPacket packet = new DatagramPacket(data, data.length);
 			try {
 				socket.receive(packet);
+				
 			} catch (IOException e) {
 				e.printStackTrace();
+			}
+			if(verbose){
+				System.out.println("Recieving packet to client: "+ Arrays.toString(data));
 			}
 			serverPort = packet.getPort();
 			packet = new DatagramPacket(data, data.length, createIp(hostIP), clientPort);
@@ -185,11 +191,14 @@ public class ErrorSimulator {
 					}
 				}
 				else
+					if(verbose){
+						System.out.println("Sending packet to client: "+ Arrays.toString(data));
+					}
 					socket.send(packet);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
+			int currentDest;
 			while(true)
 			{
 				data = new byte[516];
@@ -199,7 +208,19 @@ public class ErrorSimulator {
 				} catch (IOException e) {
 					e.printStackTrace(); 
 				}
-				int currentDest = packet.getPort() == serverPort ? clientPort : serverPort;
+				if (packet.getPort() == serverPort){
+					currentDest = clientPort;
+					if(verbose){
+						System.out.println("Recieving packet from Server: "+ Arrays.toString(data));
+					}
+				}else {
+					currentDest = serverPort;
+					if(verbose){
+						System.out.println("Recieving packet from Client: "+ Arrays.toString(data));
+					}
+				}
+				if (verbose) System.out.println("Decoding.."); 
+				
 				packet = new DatagramPacket(data, data.length,  createIp(hostIP), currentDest);
 				try {
 					//Check if the requested block matches the packet block
@@ -240,6 +261,15 @@ public class ErrorSimulator {
 						}
 					}
 					else
+						if (currentDest == serverPort){
+							if(verbose)
+								System.out.println("Sending packet to Server: "+ Arrays.toString(data));
+							
+						}else {
+							if(verbose)
+								System.out.println("Sending packet to Client: "+ Arrays.toString(data));
+						}
+						
 						socket.send(packet);
 				} catch (IOException e) {
 					e.printStackTrace();
