@@ -317,6 +317,14 @@ public class ErrorSimulator {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			byte[] receiveMsg = new byte[100];
+			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
+			try {
+				socket.receive(receivePacket);
+				System.out.println("Error packet received. " + Converter.convertErrorMessage(receivePacket.getData()) + ".\n");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
