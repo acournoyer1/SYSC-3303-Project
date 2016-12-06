@@ -94,6 +94,18 @@ public class ErrorSimulator {
 		new HostSetup(this);
 	}
 	
+	public int getOffset(byte[] b)
+	{
+		for(int i=2; i<b.length; i++)
+		{
+			if(b[i] == 0)
+			{
+				return i;
+			}
+		}
+		return 0;
+	}
+	
 	/*
 	*   Creates the host thread that deals with the DatagramPacket
 	*/
@@ -125,18 +137,97 @@ public class ErrorSimulator {
 		{
 			//Creates packet and sends it to the server
 			DatagramPacket sendPacketServer = null;
-			sendPacketServer = new DatagramPacket(request, request.length,  createIp(hostIP), SERVER_PORT_NUMBER);
+			DatagramPacket packet = new DatagramPacket(request, request.length,  createIp(hostIP), SERVER_PORT_NUMBER);
 			if(verbose)
 				System.out.println("Sending request to Server: " + Converter.convertMessage(request));
 			try{
-				socket.send(sendPacketServer);
+				PacketType pt = null;
+				if(packet.getData()[1] == 1 || packet.getData()[1] == 2) pt = PacketType.REQUEST;
+				else
+				{
+					pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
+				}
+				if(!error.hasExecuted() && error.getBlock() == (packet.getData()[2]/256 + packet.getData()[3]) && error.getPacketType() == pt){
+					switch(error.getError()){
+					case LOST:
+						if(verbose)
+							System.out.println("Losing packet. . . " + pt);
+						error.execute();
+						break;
+					case DUPLICATED:
+						try{
+							if(verbose)
+								System.out.println("Duplicating Packet. . . " + pt);
+							socket.send(packet);
+							socket.send(packet);
+							error.execute();
+						}catch(SocketException e){}
+						break;
+					case DELAYED:
+						try{
+							if(verbose)
+								System.out.println("Delaying packet. . . " + pt);
+							//Delay the packet by sleeping the thread before sending
+							Thread.sleep(error.getDelay());
+							socket.send(packet);
+							error.execute();
+							break;
+						} catch(InterruptedException ie){
+							ie.printStackTrace();
+						}
+					case CORRUPTED:
+						if(verbose) System.out.println("Corrupting packet. . . " + pt);
+						Field f = ((CorruptionError)error).getField();
+						String s = ((CorruptionError)error).getCorrupted();
+						byte[] bytes = packet.getData();
+						if (f == Field.OPCODE)
+						{
+							byte b = (byte)Integer.parseInt(s.substring(s.length()-1, s.length()));
+							bytes[1] = b;
+						}
+						if (f == Field.FILENAME)
+						{							
+							byte[] stringBytes = s.getBytes();
+							int offset = getOffset(bytes);
+							byte[] array = bytes;
+							bytes = new byte[50];
+							bytes[0] = array[0];
+							bytes[1] = array[1];
+							int j = 2;
+							for(int i = 0; i<stringBytes.length; i++, j++)
+							{
+								bytes[j] = stringBytes[i];
+							}
+							for(int i = offset; i < array.length && j < bytes.length; i++, j++)
+							{
+								bytes[j] = array[i];
+							}
+						}
+						packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), clientPort);
+						socket.send(packet);
+						error.execute();
+						break;
+					case WRONG_TID:
+						if(verbose) System.out.println("Sending an extra " + pt + " to the destination from a wrong TID.");
+						socket.send(packet);
+						new WrongTIDThread(packet.getData(), clientPort).start();
+						error.execute();
+						break;
+					default:
+						break;
+					}
+				}
+				else
+				{
+					socket.send(packet);
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.exit(1);
 			}
 			
 			byte[] data = new byte[516];
-			DatagramPacket packet = new DatagramPacket(data, data.length);
+			packet = new DatagramPacket(data, data.length);
 			try {
 				socket.receive(packet);
 				
@@ -180,6 +271,25 @@ public class ErrorSimulator {
 							ie.printStackTrace();
 						}
 					case CORRUPTED:
+						if(verbose) System.out.println("Corrupting packet. . . " + pt);
+						Field f = ((CorruptionError)error).getField();
+						String s = ((CorruptionError)error).getCorrupted();
+						byte[] bytes = packet.getData();
+						if (f == Field.OPCODE)
+						{
+							byte b = (byte)Integer.parseInt(s.substring(s.length()-1, s.length()));
+							bytes[1] = b;
+						}
+						else if (f == Field.BLOCKNUMBER)
+						{
+							byte b1 = (byte)Integer.parseInt(s.substring(0, s.length()-1));
+							byte b2 = (byte)Integer.parseInt(s.substring(s.length()-1, s.length()));
+							bytes[2] = b1;
+							bytes[3] = b2;
+						}
+						packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), clientPort);
+						socket.send(packet);
+						error.execute();
 						break;
 					case WRONG_TID:
 						if(verbose) System.out.println("Sending an extra " + pt + " to the destination from a wrong TID.");
@@ -250,6 +360,25 @@ public class ErrorSimulator {
 							error.execute();
 							break;
 						case CORRUPTED:
+							if(verbose) System.out.println("Corrupting packet. . . " + pt);
+							Field f = ((CorruptionError)error).getField();
+							String s = ((CorruptionError)error).getCorrupted();
+							byte[] bytes = packet.getData();
+							if (f == Field.OPCODE)
+							{
+								byte b = (byte)Integer.parseInt(s.substring(s.length()-1, s.length()));
+								bytes[1] = b;
+							}
+							else if (f == Field.BLOCKNUMBER)
+							{
+								byte b1 = (byte)Integer.parseInt(s.substring(0, s.length()-1));
+								byte b2 = (byte)Integer.parseInt(s.substring(s.length()-1, s.length()));
+								bytes[2] = b1;
+								bytes[3] = b2;
+							}
+							packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), currentDest);
+							socket.send(packet);
+							error.execute();
 							break;
 						case WRONG_TID:
 							if(verbose) System.out.println("Sending an extra " + pt + " to the destination from a wrong TID.");
