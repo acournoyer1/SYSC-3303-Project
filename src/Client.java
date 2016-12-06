@@ -638,7 +638,7 @@ public class Client
 		private JButton okButton;
 		private JButton cancelButton;
 		private JRadioButton defaultIPRadio;
-		
+		private JRadioButton localIPRadio;
 		
 		public ClientSetup()
 		{
@@ -657,6 +657,7 @@ public class Client
 			this.testRadio = new JRadioButton("Test", true);
 			this.readRadio = new JRadioButton("Read", true);
 			this.defaultIPRadio = new JRadioButton("Default IP", true);
+			this.localIPRadio = new JRadioButton("local IP");
 			JRadioButton newIPRadio = new JRadioButton("New IP");
 			JRadioButton quietRadio = new JRadioButton("Quiet");
 			JRadioButton normalRadio = new JRadioButton("Normal");
@@ -673,6 +674,7 @@ public class Client
 			g3.add(readRadio);
 			g3.add(writeRadio);
 			ButtonGroup g4 = new ButtonGroup();
+			g4.add(localIPRadio);
 			g4.add(defaultIPRadio);
 			g4.add(newIPRadio);
 			
@@ -694,6 +696,7 @@ public class Client
 			transferPanel.add(writeRadio);
 			
 			JPanel defaultIPPanel = new JPanel();
+			defaultIPPanel.add(localIPRadio);
 			defaultIPPanel.add(this.defaultIPRadio);
 			defaultIPPanel.add(newIPRadio);
 			defaultIPPanel.add(IPAddressField);
@@ -760,9 +763,27 @@ public class Client
 					if(testRadio.isSelected()) portNumber = HOST_PORT;
 					else portNumber = SERVER_PORT;
 					dispose();
-					if(!defaultIPRadio.isSelected()){
-						addIPAddress(IPAddressField.getText());
-					}	
+					//if(!defaultIPRadio.isSelected()){
+					//	addIPAddress(IPAddressField.getText());
+					//}
+					
+					
+					if(localIPRadio.isSelected()){
+						try {
+					
+						addIPAddress(InetAddress.getLocalHost().toString());
+						} catch (UnknownHostException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					} else if(defaultIPRadio.isSelected()){
+						
+						hostIP = readFile("IPAddress.txt");
+						
+					}
+					else{
+						addIPAddress(IPAddressField.getText());		//if newIp is selected, write the new IP to the text file
+					}
 					if(readRadio.isSelected()) 
 						try{ sendReadReceive(filename); } catch (IOException e1){e1.printStackTrace();}
 					else
