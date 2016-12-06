@@ -36,6 +36,7 @@ public class ErrorSimulator {
 	{
 		threads = new ArrayList<Thread>();
 		hostIP = readFile("IPAddress.txt");		//host IP Address
+		//hostIP = 192.168.0.18;
 		try {
 			receiveSocket = new DatagramSocket(PORT_NUMBER);
 		} catch (SocketException e) {
@@ -413,6 +414,7 @@ public class ErrorSimulator {
 					h.sendReceive();
 					
 					if(defaultIPRadio.isSelected()){
+						////FOUND IP CHANGER
 						try {
 					
 						addIPAddress(InetAddress.getLocalHost().toString());

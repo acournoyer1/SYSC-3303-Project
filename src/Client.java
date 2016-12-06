@@ -39,7 +39,7 @@ public class Client
 		directory = null;
 		
 		hostIP = readFile("IPAddress.txt");		//host IP Address
-		
+		System.out.println(hostIP);
 		try
 		{
 			socket = new DatagramSocket();	//Creates socket that sends/receives DataPackets
@@ -86,14 +86,7 @@ public class Client
 		}
 		request[i++] = 0;
 
-		
-		
-
-	//	System.out.print( createIp(hostIP).toString());
-		
-			
-			return new DatagramPacket(request, request.length,  createIp(hostIP), portNumber);
-		
+		return new DatagramPacket(request, request.length,  createIp(hostIP), portNumber);
 	}
 
 	/**
@@ -256,7 +249,7 @@ public class Client
 					//"Continue" by sending the thread back to the beginning of the while loop
 					continue;
 				}
-				//TODO: clean this up a bit remove extraneous conditions 
+				
 				//Error Handling Iteration 3: 
 				//parse bytes into int:
 				if(verbose)
@@ -303,8 +296,10 @@ public class Client
 			  			fos.write(data, 0, index);
 		 				fos.close();
 			 			//Checks to see if server had any issues with final ACK
-			 			boolean received=false; 
+			 			boolean received; 
 						do{
+							receiveMsg = new byte[512];
+							receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);
 							received = true;
 							try {
 								socket.setSoTimeout(10000);
@@ -328,8 +323,9 @@ public class Client
 								incomingByteNums =(0x00 << 16) | ((receiveMsg[2] & 0xff)<<8) | (receiveMsg[3] & 0xff);
 								incomingBlockID = incomingByteNums + overlapCounter*(1+OVERLAP);
 								if(verbose)
+									System.out.println("Response recieved from server: " + Arrays.toString(receiveMsg));
 									System.out.println("Another dataPacket recieved from Server, Addressing issue, ACK#: "+incomingBlockID);
-								if(incomingBlockID < dataBlockCounter){
+								if(incomingBlockID <= dataBlockCounter){
 									if(verbose)
 										System.out.println("incomingBlock: "+ incomingBlockID + " while data block should be: " + dataBlockCounter);
 								}
@@ -435,6 +431,7 @@ public class Client
 		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
 		socket.send(message);	
 		
+		int available = 1;
 		byte[] receiveMsg = new byte[4];
 		//Error detection variables
 		final int OVERLAP = 65535;
@@ -445,12 +442,9 @@ public class Client
 		boolean ACKdelayed=false;
 		boolean ACKlost=false;
 		boolean emptyPacketSend = false;
-		int available = is.available();
 		
 		while(available > 0 || ACKcounter < dataBlockCounter || emptyPacketSend) {		
-			//TODO: Find a better way to better initalize the array size of receive message
 			receiveMsg = new byte[100];
-			//TODO: condense code and place in method for next iteration. 
 			//Receives response from server
 			DatagramPacket receivePacket = new DatagramPacket(receiveMsg, receiveMsg.length);	
 			try {
@@ -595,12 +589,6 @@ public class Client
 		}
 		
 		return host;
-
-
-		
-
-			
-		
 	}
 	
 	
