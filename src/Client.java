@@ -356,7 +356,7 @@ public class Client extends Thread
 	/*
 	 * Allows a user to change the hostIp. Takes a string input i.e "127.0.0.1"
 	 */
-	public void changeIp(String ip){		
+	public synchronized void changeIp(String ip){		
 		
 		try {
 			hostIp = InetAddress.getByName(ip);		//creates a new InetAdress object with the provided IP address
