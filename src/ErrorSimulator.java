@@ -240,7 +240,7 @@ public class ErrorSimulator {
 				System.out.println("Recieving packet to client: "+ Arrays.toString(data));
 			}
 			serverPort = packet.getPort();
-			packet = new DatagramPacket(data, data.length, createIp(hostIP), clientPort);
+			packet = new DatagramPacket(data, data.length, clientIP, clientPort);
 			try {
 				//Check if the requested block matches the packet block
 				PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
@@ -289,7 +289,7 @@ public class ErrorSimulator {
 							bytes[2] = b1;
 							bytes[3] = b2;
 						}
-						packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), clientPort);
+						packet = new DatagramPacket(bytes, bytes.length,  clientIP, clientPort);
 						socket.send(packet);
 						error.execute();
 						break;
@@ -337,7 +337,7 @@ public class ErrorSimulator {
 				}
 				if (verbose) System.out.println("Decoding.."); 
 				
-				packet = new DatagramPacket(data, data.length,  createIp(hostIP), currentDest);
+				packet = new DatagramPacket(data, data.length,  currentIP, currentDest);
 				try {
 					//Check if the requested block matches the packet block
 					PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
