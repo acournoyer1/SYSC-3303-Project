@@ -172,8 +172,8 @@ public class Client
 		
 		//Error Handling Variables:
 		final int OVERLAP = 65535;
-		int dataBlockCounter=-1;
-		int incomingBlockID=-1;
+		int dataBlockCounter=0;
+		int incomingBlockID=0;
 		int incomingByteNums=0;
 		int overlapCounter = 0; 
 		boolean delayed=false; 
@@ -430,7 +430,7 @@ public class Client
 		System.out.println("Sending request to Host: " + Converter.convertMessage(message.getData()));
 		socket.send(message);	
 		
-		int available = 1;
+		int available = is.available();
 		byte[] receiveMsg = new byte[4];
 		//Error detection variables
 		final int OVERLAP = 65535;
@@ -440,8 +440,8 @@ public class Client
 		int dataBlockCounter=0;
 		boolean ACKdelayed=false;
 		boolean ACKlost=false;
-		boolean emptyPacketSend = false;
-		
+		boolean emptyPacketSend = available==512;
+		available = 1;
 		while(available > 0 || ACKcounter < dataBlockCounter || emptyPacketSend) {		
 			receiveMsg = new byte[100];
 			//Receives response from server

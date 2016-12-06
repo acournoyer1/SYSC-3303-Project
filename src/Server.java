@@ -409,17 +409,19 @@ public class Server {
 				e2.printStackTrace();
 			}
 			byte[] receiveMessage = new byte[4];
-			int available = 1;
+			int available = is.available();
 			
 			//Error Verification Variables 
 			final int OVERLAP = 65535;
-			int dataBlockCounter = -1;
-			int ACKcounter=-1; 
+			int dataBlockCounter = 0;
+			int ACKcounter = 0; 
 			int tempIncomingACK=0;
 			int overlapCounter = 0;
 			boolean ACKdelay = false; 
 			boolean ACKlost = false;
-			boolean emptyPacketSend = false;
+			boolean emptyPacketSend;
+			
+			emptyPacketSend = available == 512;
 			
 			is.read(data);
 		
@@ -427,8 +429,7 @@ public class Server {
 			socket.send(message);
 			if(verbose)
 				System.out.println("DATA packet sent : data packet #"+(dataBlockCounter));
-			
-			available=is.available();
+			available=1;
 			//Continually reads data from the file until no more data is available
 			while(available > 0 || ACKcounter < dataBlockCounter || emptyPacketSend) {
 				ACKdelay = false;
