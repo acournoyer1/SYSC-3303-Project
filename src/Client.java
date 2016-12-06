@@ -789,7 +789,8 @@ public class Client
 					
 					if(defaultIPRadio.isSelected()){
 						try {
-					
+							
+							
 						addIPAddress(InetAddress.getLocalHost().toString());
 						} catch (UnknownHostException e1) {
 							// TODO Auto-generated catch block

@@ -35,7 +35,7 @@ public class ErrorSimulator {
 	public ErrorSimulator()
 	{
 		threads = new ArrayList<Thread>();
-		hostIP = readFile("IPAddress.txt");		//host IP Address
+		hostIP = readFile("ErrorSimIPAddress.txt");		//host IP Address
 		try {
 			receiveSocket = new DatagramSocket(PORT_NUMBER);
 		} catch (SocketException e) {
@@ -685,7 +685,7 @@ public class ErrorSimulator {
 		FileWriter fw;
 		PrintWriter pw;
 		try {
-			fw = new FileWriter("IPAddress.txt");		//writes to the file the local IP Address if the file is empty
+			fw = new FileWriter("ErrorSimIPAddress.txt");		//writes to the file the local IP Address if the file is empty
 		    pw = new PrintWriter(fw);
 		    pw.print(ip);
 			pw.close();
