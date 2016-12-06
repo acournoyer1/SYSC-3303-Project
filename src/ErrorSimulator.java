@@ -70,7 +70,7 @@ public class ErrorSimulator {
 				System.out.println("Request received from Client: " + Converter.convertMessage(msg));
 			
 			//Creates new thread to deal with DatagramPacket
-			HostThread thread = new HostThread(receivedPacketClient.getPort(), msg);
+			HostThread thread = new HostThread(receivedPacketClient, msg);
 			threads.add(thread);
 			thread.start();
 		}
@@ -112,6 +112,7 @@ public class ErrorSimulator {
 	private class HostThread extends Thread
 	{
 		int clientPort;
+		InetAddress clientIP;
 		int serverPort;
 		DatagramSocket socket;
 		byte[] request;
@@ -119,9 +120,10 @@ public class ErrorSimulator {
 		/*
 		*   Creates new socket for thread
 		*/
-		public HostThread(int port, byte[] msg)
+		public HostThread(DatagramPacket packet, byte[] msg)
 		{
-			this.clientPort = port;
+			this.clientPort = packet.getPort();
+			this.clientIP = packet.getAddress();
 			this.request = msg;
 			try {
 				socket = new DatagramSocket();
@@ -203,7 +205,7 @@ public class ErrorSimulator {
 								bytes[j] = array[i];
 							}
 						}
-						packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), clientPort);
+						packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), serverPort);
 						socket.send(packet);
 						error.execute();
 						break;
@@ -310,6 +312,7 @@ public class ErrorSimulator {
 				e.printStackTrace();
 			}
 			int currentDest;
+			InetAddress currentIP = null;
 			while(true)
 			{
 				data = new byte[516];
@@ -321,11 +324,13 @@ public class ErrorSimulator {
 				}
 				if (packet.getPort() == serverPort){
 					currentDest = clientPort;
+					currentIP = clientIP;
 					if(verbose){
 						System.out.println("Recieving packet from Server: "+ Arrays.toString(data));
 					}
 				}else {
 					currentDest = serverPort;
+					currentIP = createIp(hostIP);
 					if(verbose){
 						System.out.println("Recieving packet from Client: "+ Arrays.toString(data));
 					}
@@ -376,7 +381,7 @@ public class ErrorSimulator {
 								bytes[2] = b1;
 								bytes[3] = b2;
 							}
-							packet = new DatagramPacket(bytes, bytes.length,  createIp(hostIP), currentDest);
+							packet = new DatagramPacket(bytes, bytes.length,  currentIP, currentDest);
 							socket.send(packet);
 							error.execute();
 							break;
