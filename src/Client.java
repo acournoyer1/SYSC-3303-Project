@@ -234,6 +234,7 @@ public class Client
 			} //not lost but has an error
 			else if((receivePacket.getData()[3] == 1 || receivePacket.getData()[3] == 2) && receivePacket.getData()[1] == 5)
 			{
+				if(hostTID == null) hostTID = receivePacket.getPort();
 				//Verify that the TID of the received packet is correct
 				if(receivePacket.getPort() != hostTID){
 					//If the ports do not match, send an errorpacket to the received packet
@@ -247,6 +248,7 @@ public class Client
 			} 
 			//Else No Errors in packet, check for duplicate and run normally. 
 			else {
+				if(hostTID == null) hostTID = receivePacket.getPort();
 				//Verify that the TID of the received packet is correct
 				if(hostTID instanceof Integer && receivePacket.getPort() != hostTID){
 					//If the ports do not match, send an errorpacket to the received packet
