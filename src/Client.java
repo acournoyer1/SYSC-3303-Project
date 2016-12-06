@@ -26,6 +26,7 @@ public class Client
 	private DatagramSocket socket;
 	private File directory;
 	private boolean verbose;
+	private boolean local = false;
 	private String filename;
 	private static String hostIP;		//IP address of the new host (localHost by default)
 	//private static InetAddress defaultIp;	//IP address of the default host (localHost by default)
@@ -39,7 +40,6 @@ public class Client
 		directory = null;
 		
 		hostIP = readFile("IPAddress.txt");		//host IP Address
-		
 		try
 		{
 			socket = new DatagramSocket();	//Creates socket that sends/receives DataPackets
@@ -280,7 +280,7 @@ public class Client
 					b[2]=(byte)(dataBlockCounter/256);
 					b[3]=(byte)(dataBlockCounter%256);
 					try {
-						message = new DatagramPacket(b, b.length, InetAddress.getLocalHost(), receivePacket.getPort());
+						message = new DatagramPacket(b, b.length, createIp(hostIP), receivePacket.getPort());
 						socket.send(message);
 					} catch(UnknownHostException e) {
 						e.printStackTrace();
@@ -578,15 +578,23 @@ public class Client
 	 *creates a InetAddress object with a string. Takes a string input i.e "127.0.0.1"
 	 */
 	private InetAddress createIp(String ip){		
-		
 		InetAddress host = null;
-		try {
-			host = InetAddress.getByName(ip);
-		} catch (UnknownHostException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+		if (local){ 
+			try {
+				host = InetAddress.getLocalHost();
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}else{
+			try {
+				host = InetAddress.getByName(ip);
+			} catch (UnknownHostException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
 		}
-		
 		return host;
 	}
 	
@@ -769,19 +777,14 @@ public class Client
 					
 					
 					if(localIPRadio.isSelected()){
-						try {
-					
-						addIPAddress(InetAddress.getLocalHost().toString());
-						} catch (UnknownHostException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
+						local = true;
 					} else if(defaultIPRadio.isSelected()){
-						
+						local = false; 
 						hostIP = readFile("IPAddress.txt");
 						
 					}
 					else{
+						local = false; 
 						addIPAddress(IPAddressField.getText());		//if newIp is selected, write the new IP to the text file
 					}
 					if(readRadio.isSelected()) 
