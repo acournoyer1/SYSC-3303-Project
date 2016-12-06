@@ -5,9 +5,13 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.ParseException;
 import java.util.ArrayList;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.MaskFormatter;
 
 /**
  * Creates a instance of intermediate host the mediates requests between client and server
@@ -20,7 +24,7 @@ public class ErrorSimulator {
 	private ArrayList<Thread> threads;
 	private boolean verbose;
 	private Error error;
-	
+	private static String hostIP;		//IP address of the new host (localHost by default)
 	//Well known ports for intermediate and server
 	private static final int PORT_NUMBER = 23;
 	private static final int SERVER_PORT_NUMBER = 69;
@@ -31,6 +35,7 @@ public class ErrorSimulator {
 	public ErrorSimulator()
 	{
 		threads = new ArrayList<Thread>();
+		hostIP = readFile("IPAddress.txt");		//host IP Address
 		try {
 			receiveSocket = new DatagramSocket(PORT_NUMBER);
 		} catch (SocketException e) {
@@ -116,12 +121,7 @@ public class ErrorSimulator {
 		{
 			//Creates packet and sends it to the server
 			DatagramPacket sendPacketServer = null;
-			try {
-				sendPacketServer = new DatagramPacket(request, request.length, InetAddress.getLocalHost(), SERVER_PORT_NUMBER);
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
+			sendPacketServer = new DatagramPacket(request, request.length,  createIp(hostIP), SERVER_PORT_NUMBER);
 			if(verbose)
 				System.out.println("Sending request to Server: " + Converter.convertMessage(request));
 			try{
@@ -139,11 +139,7 @@ public class ErrorSimulator {
 				e.printStackTrace();
 			}
 			serverPort = packet.getPort();
-			try {
-				packet = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), clientPort);
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
+			packet = new DatagramPacket(data, data.length, createIp(hostIP), clientPort);
 			try {
 				//Check if the requested block matches the packet block
 				PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
@@ -203,11 +199,7 @@ public class ErrorSimulator {
 					e.printStackTrace(); 
 				}
 				int currentDest = packet.getPort() == serverPort ? clientPort : serverPort;
-				try {
-					packet = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), currentDest);
-				} catch (UnknownHostException e) {
-					e.printStackTrace();
-				}
+				packet = new DatagramPacket(data, data.length,  createIp(hostIP), currentDest);
 				try {
 					//Check if the requested block matches the packet block
 					PacketType pt = packet.getData()[1] == 3 ? PacketType.DATA : PacketType.ACK;
@@ -320,7 +312,7 @@ public class ErrorSimulator {
 		public void run()
 		{
 			try {
-				DatagramPacket p = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), destination);
+				DatagramPacket p = new DatagramPacket(msg, msg.length, createIp(hostIP), destination);
 				socket.send(p);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -342,32 +334,52 @@ public class ErrorSimulator {
 		private JRadioButton verboseRadio;
 		private JButton okButton;
 		private JButton cancelButton;
-		
+		private JRadioButton defaultIPRadio;
+		private JTextField IPAddressField;
 		private ErrorSimulator h;
 		
 		public HostSetup(ErrorSimulator h)
 		{
+			
+			try {
+				this.IPAddressField = new JFormattedTextField(new MaskFormatter("###.###.###.###"));
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			this.IPAddressField.setColumns(10);
 			this.h = h;
 			this.errorPane = new ErrorPane();
 			this.verboseRadio = new JRadioButton("Verbose", true);
 			this.okButton = new JButton("OK");
 			this.cancelButton = new JButton("Cancel");
-			
+			this.defaultIPRadio = new JRadioButton("Default IP", true);
+			JRadioButton newIPRadio = new JRadioButton("New IP");
 			JRadioButton quietRadio = new JRadioButton("Quiet");
-			ButtonGroup group = new ButtonGroup();
-			group.add(verboseRadio);
-			group.add(quietRadio);
+			ButtonGroup g1 = new ButtonGroup();
+			ButtonGroup g2 = new ButtonGroup();
+			g1.add(verboseRadio);
+			g1.add(quietRadio);
+			g2.add(defaultIPRadio);
+			g2.add(newIPRadio);
 			
-			JPanel p = new JPanel();
-			p.add(verboseRadio);
-			p.add(quietRadio);
+			JPanel p1 = new JPanel();
+			JPanel p2 = new JPanel();
+			p1.add(verboseRadio);
+			p1.add(quietRadio);
+			p2.add(defaultIPRadio);
+			p2.add(newIPRadio);
+			p2.add(IPAddressField);
+		
 			
 			JPanel buttons = new JPanel();
 			buttons.add(okButton);
 			buttons.add(cancelButton);
 			
-			this.add(p, BorderLayout.NORTH);
-			this.add(errorPane, BorderLayout.CENTER);
+			this.add(p1, BorderLayout.WEST);
+			this.add(p2, BorderLayout.EAST);
+			this.add(errorPane, BorderLayout.NORTH);
 			this.add(buttons, BorderLayout.SOUTH);
 			this.setResizable(false);
 			errorPane.setBorder(new EmptyBorder(this.getInsets()));
@@ -391,6 +403,19 @@ public class ErrorSimulator {
 					else verbose = false;
 					dispose();
 					h.sendReceive();
+					
+					if(defaultIPRadio.isSelected()){
+						try {
+					
+						addIPAddress(InetAddress.getLocalHost().toString());
+						} catch (UnknownHostException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+					else{
+						addIPAddress(IPAddressField.getText());		//if newIp is selected, write the new IP to the text file
+					}
 				}
 			});
 			cancelButton.addActionListener(new ActionListener()
@@ -606,6 +631,70 @@ public class ErrorSimulator {
 		}
 		
 	}
+	
+	
+
+	/**
+	 *readFile method:
+	 *reads a text file line by line and returns a string
+	 */
+	private static String readFile(String path) 
+	{
+			  byte[] encoded;
+			  String s = "";
+			try {
+				encoded = Files.readAllBytes(Paths.get(path));
+				s = new String(encoded);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			  return s;
+	}
+	
+	/**
+	 * createIp method: 
+	 *creates a InetAddress object with a string. Takes a string input i.e "127.0.0.1"
+	 */
+	private InetAddress createIp(String ip){		
+		
+		InetAddress host = null;
+		try {
+			host = InetAddress.getByName(ip);
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		return host;
+
+
+		
+
+			
+		
+	}
+	
+	/**
+	 * addIPAddress method:
+	 * Writes to a text file a given IP address 
+	 * @param ip
+	 */
+	private void addIPAddress(String ip){
+		
+		FileWriter fw;
+		PrintWriter pw;
+		try {
+			fw = new FileWriter("IPAddress.txt");		//writes to the file the local IP Address if the file is empty
+		    pw = new PrintWriter(fw);
+		    pw.print(ip);
+			pw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 	
 	/**
 	 * 	Defines all of the types of errors that are available
