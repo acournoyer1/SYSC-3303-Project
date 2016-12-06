@@ -36,6 +36,7 @@ public class ErrorSimulator {
 	*/
 	public ErrorSimulator()
 	{
+		
 		threads = new ArrayList<Thread>();
 		hostIP = readFile("ErrorSimIPAddress.txt");		//host IP Address
 		//hostIP = 192.168.0.18;
