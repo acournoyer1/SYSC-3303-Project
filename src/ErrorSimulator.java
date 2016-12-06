@@ -212,7 +212,7 @@ public class ErrorSimulator {
 					case WRONG_TID:
 						if(verbose) System.out.println("Sending an extra " + pt + " to the destination from a wrong TID.");
 						socket.send(packet);
-						new WrongTIDThread(packet.getData(), clientPort).start();
+						new WrongTIDThread(packet.getData(), serverPort, createIp(hostIP)).start();
 						error.execute();
 						break;
 					default:
@@ -296,7 +296,7 @@ public class ErrorSimulator {
 					case WRONG_TID:
 						if(verbose) System.out.println("Sending an extra " + pt + " to the destination from a wrong TID.");
 						socket.send(packet);
-						new WrongTIDThread(packet.getData(), clientPort).start();
+						new WrongTIDThread(packet.getData(), clientPort, clientIP).start();
 						error.execute();
 						break;
 					default:
@@ -388,7 +388,7 @@ public class ErrorSimulator {
 						case WRONG_TID:
 							if(verbose) System.out.println("Sending an extra " + pt + " to the destination from a wrong TID.");
 							socket.send(packet);
-							new WrongTIDThread(packet.getData(), currentDest).start();
+							new WrongTIDThread(packet.getData(), currentDest, currentIP).start();
 							error.execute();
 							break;
 						default:
@@ -462,8 +462,9 @@ public class ErrorSimulator {
 		private DatagramSocket socket;
 		private byte[] msg;
 		private int destination;
+		private InetAddress destinationIP;
 		
-		public WrongTIDThread(byte[] msg, int destination)
+		public WrongTIDThread(byte[] msg, int destination, InetAddress destinationIP)
 		{
 			try {
 				this.socket = new DatagramSocket();
@@ -471,6 +472,7 @@ public class ErrorSimulator {
 				e.printStackTrace();
 			}
 			this.destination = destination;
+			this.destinationIP = destinationIP;
 			this.msg = msg;
 		}
 		
@@ -478,7 +480,7 @@ public class ErrorSimulator {
 		public void run()
 		{
 			try {
-				DatagramPacket p = new DatagramPacket(msg, msg.length, createIp(hostIP), destination);
+				DatagramPacket p = new DatagramPacket(msg, msg.length, destinationIP, destination);
 				socket.send(p);
 			} catch (IOException e) {
 				e.printStackTrace();
