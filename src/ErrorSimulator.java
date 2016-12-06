@@ -38,7 +38,7 @@ public class ErrorSimulator {
 	{
 		
 		threads = new ArrayList<Thread>();
-		hostIP = readFile("ErrorSimIPAddress.txt");		//host IP Address
+		hostIP = readFile("IPAddress.txt");		//host IP Address
 		//hostIP = 192.168.0.18;
 		try {
 			receiveSocket = new DatagramSocket(PORT_NUMBER);
