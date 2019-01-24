@@ -1,0 +1,10 @@
+{
+  "summary": {
+    "title": "Threat 1",
+    "description": "This system takes files and sends them to another node on the LAN provided machine name and IP"
+  },
+  "detail": {
+    "contributors": [],
+    "diagrams": []
+  }
+}
